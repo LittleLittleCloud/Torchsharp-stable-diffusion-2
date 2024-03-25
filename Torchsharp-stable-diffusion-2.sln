@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.002.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Torchsharp-stable-diffusion-2", "Torchsharp-Torchsharp-stable-diffusion-2.csproj", "{82F77C34-779B-4D12-9B9C-B32DC14D77B4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Torchsharp-stable-diffusion-2", "Torchsharp-stable-diffusion-2.csproj", "{82F77C34-779B-4D12-9B9C-B32DC14D77B4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -77,17 +77,8 @@ public class Encoder : Module<Tensor, Tensor>
         }
     }
 
-    public override Tensor Forward(Tensor x)
+    public override Tensor forward(Tensor x)
     {
-        var encoder = new Sequential();
-        for (int i = 0; i < _blockOutChannels.Length; i++)
-        {
-            encoder.Add(new DownEncoderBlock2D(_inChannels, _blockOutChannels[i], _downBlockTypes[i], _layersPerBlock, _normNumGroups, _activationFunction));
-            _inChannels = _blockOutChannels[i];
-        }
-
-        encoder.Add(new Conv2D(_inChannels, _outChannels, 1, 1, 0, 1, 1, false, _normNumGroups, _activationFunction));
-
-        return encoder.forward(x);
+        throw new NotImplementedException();
     }
 }

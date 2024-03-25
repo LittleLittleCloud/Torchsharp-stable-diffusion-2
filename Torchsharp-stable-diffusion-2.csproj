@@ -24,4 +24,11 @@
     <PackageReference Include="TorchSharp.PyBridge" Version="1.2.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="ApprovalTests" Version="6.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.0" />
+    <PackageReference Include="xunit" Version="2.4.2" />
+    <PackageReference Include="xunit.runner.console" Version="2.4.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.2" />
+  </ItemGroup>
 </Project>
