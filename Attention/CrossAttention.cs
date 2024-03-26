@@ -38,6 +38,12 @@ public class CrossAttention : Module<Tensor, Tensor?, Tensor?, Tensor?, Tensor>
     private Module<Tensor, Tensor> to_v;
     private ModuleList<Module<Tensor, Tensor>> to_out;
 
+    // deprecated module
+    private Module<Tensor, Tensor>? query;
+    private Module<Tensor, Tensor>? key;
+    private Module<Tensor, Tensor>? value;
+    private Module<Tensor, Tensor>? proj_attn;
+
     /// <summary>
     /// Cross-Attention module.
     /// </summary>
@@ -83,7 +89,8 @@ public class CrossAttention : Module<Tensor, Tensor?, Tensor?, Tensor?, Tensor>
         float rescale_output_factor = 1f,
         bool residual_connection = false,
         AttnProcessorBase? processor = null,
-        int? out_dim = null)
+        int? out_dim = null,
+        bool _from_deprecated_attn_block = false)
         : base(nameof(CrossAttention))
         {
             this.inner_dim = out_dim ?? dim_head * heads;
@@ -134,25 +141,56 @@ public class CrossAttention : Module<Tensor, Tensor?, Tensor?, Tensor?, Tensor>
             {
                 throw new ArgumentException($"cross_attention_norm must be None, layer_norm, or group_norm, got {cross_attention_norm}.");
             }
-
-            this.to_q = Linear(query_dim, this.inner_dim, hasBias: this.use_bias);
-
-            if (!this.only_cross_attention){
-                this.to_k = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias);
-                this.to_v = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias);
-            }
-
-            if (this.added_kv_proj_dim != null)
-            {
-                this.add_k_proj = Linear(this.added_kv_proj_dim.Value, this.inner_dim);
-                this.add_v_proj = Linear(this.added_kv_proj_dim.Value, this.inner_dim);
-            }
-
-            this.to_out = new ModuleList<Module<Tensor, Tensor>>();
-            this.to_out.Add(Linear(this.inner_dim, this.out_dim, hasBias: out_bias));
-            this.to_out.Add(Dropout(dropout));
-            RegisterComponents();
+            
             this.processor = processor ?? new AttnProcessor2_0();
+
+            if (_from_deprecated_attn_block)
+            {
+                this.query = Linear(query_dim, this.inner_dim, hasBias: this.use_bias);
+                if (!this.only_cross_attention)
+                {
+                    this.key = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias);
+                    this.value = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias);
+                }
+
+                if (this.added_kv_proj_dim != null)
+                {
+                    this.add_k_proj = Linear(this.added_kv_proj_dim.Value, this.inner_dim);
+                    this.add_v_proj = Linear(this.added_kv_proj_dim.Value, this.inner_dim);
+                }
+                this.key = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias);
+                this.value = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias);
+                this.proj_attn = Linear(this.inner_dim, this.out_dim, hasBias: out_bias);
+                RegisterComponents();
+
+                this.to_q = this.query;
+                this.to_k = this.key;
+                this.to_v = this.value;
+                this.to_out = new ModuleList<Module<Tensor, Tensor>>();
+                this.to_out.Add(this.proj_attn);
+                this.to_out.Add(nn.Dropout(dropout));
+                return;
+            }
+            else
+            {
+                this.to_q = Linear(query_dim, this.inner_dim, hasBias: this.use_bias);
+
+                if (!this.only_cross_attention){
+                    this.to_k = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias);
+                    this.to_v = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias);
+                }
+
+                if (this.added_kv_proj_dim != null)
+                {
+                    this.add_k_proj = Linear(this.added_kv_proj_dim.Value, this.inner_dim);
+                    this.add_v_proj = Linear(this.added_kv_proj_dim.Value, this.inner_dim);
+                }
+
+                this.to_out = new ModuleList<Module<Tensor, Tensor>>();
+                this.to_out.Add(nn.Linear(this.inner_dim, this.out_dim, hasBias: out_bias));
+                this.to_out.Add(nn.Dropout(dropout));
+                RegisterComponents();
+            }
         }
 
     public int InnerDim => inner_dim;

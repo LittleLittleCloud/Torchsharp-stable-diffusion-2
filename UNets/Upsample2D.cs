@@ -101,7 +101,7 @@ public class Upsample2D : Module<Tensor, int?, Tensor>
 
         if (this.interpolate){
             if (output_size is null){
-                hidden_states = nn.functional.interpolate(hidden_states, scale_factor: [2], mode: InterpolationMode.Nearest);
+                hidden_states = nn.functional.interpolate(hidden_states, scale_factor: [2, 2], mode: InterpolationMode.Nearest);
             }
             else{
                 hidden_states = nn.functional.interpolate(hidden_states, size: [output_size.Value], mode: InterpolationMode.Nearest);

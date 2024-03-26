@@ -20,7 +20,7 @@
     <!-- use the following package if you are on windows -->
     <!-- <PackageReference Include="TorchSharp-cuda-windows" Version="0.101.5" /> -->
     <!-- If you don't have GPU, use the following package -->
-    <!-- <PackageReference Include="TorchSharp-cpu" Version="0.101.5" /> -->
+    <PackageReference Include="TorchSharp-cpu" Version="0.101.5" />
     <PackageReference Include="TorchSharp.PyBridge" Version="1.2.0" />
   </ItemGroup>
 

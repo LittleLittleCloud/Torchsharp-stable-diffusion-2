@@ -25,9 +25,9 @@ public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
     private Module<Tensor, Tensor> dropout;
     private Linear? time_emb_proj;
     private Module<Tensor, Tensor> nonlinearity;
-    private Module<Tensor, int?, Tensor>? upsample;
-    private Module<Tensor, Tensor>? downsample;
-    private Module<Tensor, Tensor>? conv_shortcut;
+    private Module<Tensor, int?, Tensor>? upsample = null;
+    private Module<Tensor, Tensor>? downsample = null;
+    private Module<Tensor, Tensor>? conv_shortcut = null;
     public ResnetBlock2D(
         int in_channels,
         int? out_channels = null,
@@ -68,7 +68,7 @@ public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
             groups_out = groups_out ?? groups;
 
             this.norm1 = nn.GroupNorm(num_groups: groups, num_channels: in_channels, eps: eps, affine: true);
-            this.conv1 = nn.Conv2d(in_channels, this.out_channels, kernelSize: 3, stride: 1, padding: 1, bias: false);
+            this.conv1 = nn.Conv2d(in_channels, this.out_channels, kernelSize: 3, stride: 1, padding: 1, bias: true);
 
             if (temb_channels is not null)
             {
@@ -89,8 +89,8 @@ public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
 
             this.norm2 = nn.GroupNorm(num_groups: groups_out.Value, num_channels: this.out_channels, eps: eps, affine: true);
             this.dropout = nn.Dropout(dropout);
-            var conv_2d_out_channels_ = conv_2d_out_channels ?? this.out_channels;
-            this.conv2 = nn.Conv2d(this.out_channels, conv_2d_out_channels_, kernelSize: 3, stride: 1, padding: 1, bias: false);
+            conv_2d_out_channels = conv_2d_out_channels ?? this.out_channels;
+            this.conv2 = nn.Conv2d(this.out_channels, conv_2d_out_channels.Value, kernelSize: 3, stride: 1, padding: 1, bias: true);
             this.nonlinearity = Utils.GetActivation(non_linearity);
             if (this.up){
                 this.upsample = new Upsample2D(channels: in_channels, use_conv: false);
@@ -99,7 +99,7 @@ public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
                 this.downsample = new Downsample2D(channels: in_channels, use_conv: false, padding: 1, name: "op");
             }
 
-            this.use_in_shortcut = use_in_shortcut ?? this.in_channels != this.out_channels;
+            this.use_in_shortcut = use_in_shortcut ?? this.in_channels != conv_2d_out_channels;
 
             if (this.use_in_shortcut)
             {
@@ -112,7 +112,6 @@ public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
         var hidden_states = input_tensor;
         hidden_states = this.norm1.forward(hidden_states);
         hidden_states = this.nonlinearity.forward(hidden_states);
-
         if (this.upsample is not null){
             input_tensor = this.upsample.forward(input_tensor, null);
             hidden_states = this.upsample.forward(hidden_states, null);
@@ -121,9 +120,7 @@ public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
             input_tensor = this.downsample.forward(input_tensor);
             hidden_states = this.downsample.forward(hidden_states);
         }
-
         hidden_states = this.conv1.forward(hidden_states);
-
         if (this.time_emb_proj is not null)
         {
             if (!this.skip_time_act){
@@ -153,19 +150,21 @@ public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
             hidden_states = this.norm2.forward(hidden_states);
             hidden_states = hidden_states * (1 + time_scale) + time_shift;
         }
-        else{
+        else
+        {
             hidden_states = this.norm2.forward(hidden_states);
         }
 
         hidden_states = this.nonlinearity.forward(hidden_states);
         hidden_states = this.dropout.forward(hidden_states);
         hidden_states = this.conv2.forward(hidden_states);
-
-        if (this.use_conv_shortcut)
+        hidden_states.Peek("hidden_states");
+        if (this.conv_shortcut is not null)
         {
-            input_tensor = this.conv_shortcut!.forward(input_tensor);
+            input_tensor = this.conv_shortcut.forward(input_tensor);
         }
 
-        return (hidden_states + input_tensor) / this.output_scale_factor;
+
+        return (input_tensor + hidden_states) / this.output_scale_factor;
     }
 }

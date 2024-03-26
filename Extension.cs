@@ -1,29 +1,45 @@
+using System.Text;
 using TorchSharp;
 using static TorchSharp.torch;
 
 public static class Extension
 {
-    public static void Peek(this Tensor tensor, string id, int n = 10)
+    public static string Peek(this Tensor tensor, string id, int n = 10)
     {
         var device = tensor.device;
         tensor = tensor.cpu();
         var shapeString = string.Join(',', tensor.shape);
-        var dataString = string.Join(',', tensor.reshape(-1)[..n].to_type(ScalarType.Float32).data<float>().ToArray());
         var tensor_1d = tensor.reshape(-1);
         var tensor_index = torch.arange(tensor_1d.shape[0], dtype: ScalarType.Float32).to(tensor_1d.device).sqrt();
         var avg = (tensor_1d * tensor_index).sum();
         avg = avg / tensor_1d.sum();
-        Console.WriteLine($"{id}: sum: {avg.ToSingle()}  dtype: {tensor.dtype} shape: [{shapeString}] device: {device} has grad? {tensor.requires_grad}");
+        // keep four decimal places
+        avg = avg.round(4);
+        var str = $"{id}: sum: {avg.ToSingle()}  dtype: {tensor.dtype} shape: [{shapeString}]";
+
+        Console.WriteLine(str);
+
+        return str;
     }
 
-    public static void Peek(this nn.Module model)
+    public static string Peek(this nn.Module model)
     {
+        var sb = new StringBuilder();
         var state_dict = model.state_dict();
         // preview state_dict
+        int i = 0;
         foreach (var (key, value) in state_dict.OrderBy(x => x.Key))
         {
-            value.Peek(key);
+            var str = value.Peek(key);
+            sb.AppendLine($"{i}: {str}");
+            i++;
         }
+
+        var res = sb.ToString();
+
+        Console.WriteLine(res);
+
+        return res;
     }
 
     public static void LoadStateDict(this Dictionary<string, Tensor> dict, string location)

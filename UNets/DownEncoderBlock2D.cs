@@ -41,7 +41,7 @@ public class DownEncoderBlock2D : Module<Tensor, Tensor>
                         time_embedding_norm: resnet_time_scale_shift,
                         output_scale_factor: output_scale_factor,
                         up: false,
-                        down: add_downsample,
+                        down: false,
                         conv_2d_out_channels: out_channels,
                         conv_shortcut: false,
                         conv_shortcut_bias: true
@@ -53,7 +53,7 @@ public class DownEncoderBlock2D : Module<Tensor, Tensor>
                         in_channels: in_channels,
                         out_channels: out_channels,
                         dropout: dropout,
-                        temb_channels: out_channels,
+                        temb_channels: null,
                         groups: resnet_groups,
                         pre_norm: resnet_pre_norm,
                         eps: resnet_eps,
@@ -61,7 +61,7 @@ public class DownEncoderBlock2D : Module<Tensor, Tensor>
                         time_embedding_norm: resnet_time_scale_shift,
                         output_scale_factor: output_scale_factor,
                         up: false,
-                        down: add_downsample,
+                        down: false,
                         conv_2d_out_channels: out_channels,
                         conv_shortcut: false,
                         conv_shortcut_bias: true

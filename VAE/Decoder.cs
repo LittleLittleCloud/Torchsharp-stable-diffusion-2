@@ -58,7 +58,7 @@ public class Decoder : Module<Tensor, Tensor?, Tensor>
         this.mid_block_add_attention = mid_block_add_attention;
 
         this.conv_in = torch.nn.Conv2d(this.in_channels, this.block_out_channels[^1], kernelSize: 3, stride: 1, padding: 1);
-        int temb_channels = norm_type == "spatial" ? in_channels : 512;
+        int? temb_channels = norm_type == "spatial" ? in_channels : null;
 
         // mid
         this.mid_block = new UNetMidBlock2D(
@@ -99,7 +99,7 @@ public class Decoder : Module<Tensor, Tensor?, Tensor>
         // out
         if (norm_type == "spatial")
         {
-            this.conv_norm_out = new SpatialNorm(block_out_channels[0], temb_channels);
+            this.conv_norm_out = new SpatialNorm(block_out_channels[0], temb_channels ?? 512);
         }
         else
         {
@@ -108,6 +108,8 @@ public class Decoder : Module<Tensor, Tensor?, Tensor>
 
         this.conv_act = nn.SiLU();
         this.conv_out = nn.Conv2d(block_out_channels[0], out_channels, kernelSize: 3, padding: Padding.Same);
+
+        RegisterComponents();
     }
 
     public override Tensor forward(Tensor sample, Tensor? latent_embeds = null)

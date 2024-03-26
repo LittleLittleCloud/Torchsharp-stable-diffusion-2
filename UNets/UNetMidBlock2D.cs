@@ -20,7 +20,7 @@ public class UNetMidBlock2D : Module<Tensor, Tensor?, Tensor>
     private readonly bool add_attention;
     public UNetMidBlock2D(
         int in_channels,
-        int temb_channels = 512,
+        int? temb_channels = null,
         float dropout = 0.0f,
         int num_layers = 1,
         float resnet_eps = 1e-6f,
@@ -49,9 +49,9 @@ public class UNetMidBlock2D : Module<Tensor, Tensor?, Tensor>
                 new ResnetBlockCondNorm2D(
                     in_channels: in_channels,
                     out_channels: in_channels,
-                    temb_channels: temb_channels,
+                    temb_channels: temb_channels ?? 512,
                     eps: resnet_eps,
-                    groups: resnet_groups ?? 32,
+                    groups: resnet_groups.Value,
                     dropout: dropout,
                     time_embedding_norm: "spatial",
                     non_linearity: resnet_act_fn,
@@ -66,7 +66,7 @@ public class UNetMidBlock2D : Module<Tensor, Tensor?, Tensor>
                     out_channels: in_channels,
                     temb_channels: temb_channels,
                     eps: resnet_eps,
-                    groups: resnet_groups ?? 32,
+                    groups: resnet_groups.Value,
                     dropout: dropout,
                     time_embedding_norm: resnet_time_scale_shift,
                     non_linearity: resnet_act_fn,
@@ -91,7 +91,8 @@ public class UNetMidBlock2D : Module<Tensor, Tensor?, Tensor>
                         spatial_norm_dim: resnet_time_scale_shift == "spatial" ? temb_channels : null,
                         residual_connection: true,
                         bias: true,
-                        upcast_softmax: true)
+                        upcast_softmax: true,
+                        _from_deprecated_attn_block: true)
                 );
             }
             else
@@ -105,9 +106,9 @@ public class UNetMidBlock2D : Module<Tensor, Tensor?, Tensor>
                     new ResnetBlockCondNorm2D(
                         in_channels: in_channels,
                         out_channels: in_channels,
-                        temb_channels: temb_channels,
+                        temb_channels: temb_channels ?? 512,
                         eps: resnet_eps,
-                        groups: resnet_groups ?? 32,
+                        groups: resnet_groups!.Value,
                         dropout: dropout,
                         time_embedding_norm: "spatial",
                         non_linearity: resnet_act_fn,
@@ -122,7 +123,7 @@ public class UNetMidBlock2D : Module<Tensor, Tensor?, Tensor>
                         out_channels: in_channels,
                         temb_channels: temb_channels,
                         eps: resnet_eps,
-                        groups: resnet_groups ?? 32,
+                        groups: resnet_groups!.Value,
                         dropout: dropout,
                         time_embedding_norm: resnet_time_scale_shift,
                         non_linearity: resnet_act_fn,
@@ -133,11 +134,13 @@ public class UNetMidBlock2D : Module<Tensor, Tensor?, Tensor>
         }
 
         this.attentions = attentions;
+        RegisterComponents();
     }
 
     public override Tensor forward(Tensor hidden_states, Tensor? temb = null)
     {
         hidden_states = resnets[0].forward(hidden_states, temb);
+        hidden_states.Peek("unet_mid_h");
         foreach (var (attn, resnet) in Enumerable.Zip(attentions, resnets.Skip(1)))
         {
             if (attn is not null)

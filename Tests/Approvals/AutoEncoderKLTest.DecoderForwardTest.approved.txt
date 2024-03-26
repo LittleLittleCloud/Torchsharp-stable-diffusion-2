@@ -1,0 +1,1 @@
+﻿autokl_decoder_forward: sum: 969.2767  dtype: Float32 shape: [1,3,768,768]

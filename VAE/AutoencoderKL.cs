@@ -2,10 +2,12 @@ using static TorchSharp.torch.nn;
 using static TorchSharp.torch;
 using TorchSharp.Modules;
 using TorchSharp;
+using System.Text.Json;
+using TorchSharp.PyBridge;
 
 namespace SD;
 
-public class AutoencoderKL : Module<Tensor, bool, Generator?, Tensor>
+public class AutoencoderKL : Module<Tensor, bool, Generator?, Tensor>, IModelConfigLoader<AutoencoderKL>
 {
     private readonly int in_channels;
     private readonly int out_channels;
@@ -92,6 +94,8 @@ public class AutoencoderKL : Module<Tensor, bool, Generator?, Tensor>
 
         this.quant_conv = nn.Conv2d(2 * latent_channels, 2 * latent_channels, kernelSize: 1, padding: Padding.Valid);
         this.post_quant_conv = nn.Conv2d(latent_channels, latent_channels, kernelSize: 1, padding: Padding.Same);
+
+        RegisterComponents();
     }
 
     public Decoder Decoder => this.decoder;
@@ -138,5 +142,56 @@ public class AutoencoderKL : Module<Tensor, bool, Generator?, Tensor>
         var dec = this._decode(z);
 
         return dec;
+    }
+
+    public static AutoencoderKL FromPretrained(
+        string pretrainedModelNameOrPath,
+        string configName = "config.json",
+        string modelWeightName = "diffusion_pytorch_model",
+        bool useSafeTensor = true,
+        ScalarType torchDtype = ScalarType.Float32
+    )
+    {
+        var configPath = Path.Combine(pretrainedModelNameOrPath, configName);
+        var json = File.ReadAllText(configPath);
+        var config = JsonSerializer.Deserialize<Config>(json);
+
+        var autoEncoderKL = new AutoencoderKL(
+            in_channels: config!.InChannels,
+            out_channels: config!.OutChannels,
+            down_block_types: config!.DownBlockTypes,
+            up_block_types: config!.UpBlockTypes,
+            block_out_channels: config!.BlockOutChannels,
+            layers_per_block: config!.LayersPerBlock,
+            act_fn: config!.ActivationFunction,
+            latent_channels: config!.LatentChannels,
+            norm_num_groups: config!.NormNumGroups,
+            sample_size: config!.SampleSize);
+
+        modelWeightName = (useSafeTensor, torchDtype) switch
+        {
+            (true, ScalarType.Float32) => $"{modelWeightName}.safetensors",
+            (true, ScalarType.BFloat16) => $"{modelWeightName}.fp16.safetensors",
+            (false, ScalarType.Float32) => $"{modelWeightName}.bin",
+            (false, ScalarType.BFloat16) => $"{modelWeightName}.fp16.bin",
+            _ => throw new ArgumentException("Invalid arguments for useSafeTensor and torchDtype")
+        };
+
+        var location = Path.Combine(pretrainedModelNameOrPath, modelWeightName);
+
+        var loadedParameters = new Dictionary<string, bool>();
+        autoEncoderKL.load_safetensors(location, strict: false, loadedParameters: loadedParameters);
+
+        return autoEncoderKL;
+    }
+
+    public AutoencoderKL LoadFromModelConfig(
+        string pretrainedModelNameOrPath,
+        string configName = "config.json",
+        string modelWeightName = "diffusion_pytorch_model",
+        bool useSafeTensor = true,
+        ScalarType torchDtype = ScalarType.Float32)
+    {
+        return AutoencoderKL.FromPretrained(pretrainedModelNameOrPath, configName, modelWeightName, useSafeTensor, torchDtype);
     }
 }

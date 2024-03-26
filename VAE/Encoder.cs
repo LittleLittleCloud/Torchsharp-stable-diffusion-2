@@ -93,17 +93,21 @@ public class Encoder : Module<Tensor, Tensor>
         this.conv_act = nn.SiLU();
         var conv_out_channels = doubleZ ? _outChannels * 2 : _outChannels;
         this.conv_out = nn.Conv2d(_blockOutChannels[^1], conv_out_channels, kernelSize: 3, padding: Padding.Same);
+
+        RegisterComponents();
     }
 
     public override Tensor forward(Tensor sample)
     {
         sample = this.conv_in.forward(sample);
+        sample.Peek("sample");
+        Console.WriteLine($"length of down_block: {this.down_blocks.Count}");
         // down
         foreach (var down_block in this.down_blocks)
         {
             sample = down_block.forward(sample);
         }
-
+        sample.Peek("sample");
         // mid
         sample = this.mid_block.forward(sample);
         // post-process
