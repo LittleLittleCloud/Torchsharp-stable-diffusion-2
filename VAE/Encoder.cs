@@ -17,11 +17,13 @@ public class Encoder : Module<Tensor, Tensor>
     private readonly int _layersPerBlock;
     private readonly int _normNumGroups;
     private readonly string _activationFunction;
-
-    private readonly Module conv_in;
+    private readonly bool gradient_checkpointing = false;
+    private readonly Module<Tensor, Tensor> conv_in;
     private readonly ModuleList<Module<Tensor, Tensor>> down_blocks;
-    private readonly Module? mid_block;
-    private readonly Module? conv_out;
+    private readonly UNetMidBlock2D mid_block;
+    private readonly Module<Tensor, Tensor> conv_out;
+    private readonly Module<Tensor, Tensor> conv_norm_out;
+    private readonly Module<Tensor, Tensor> conv_act;
 
 
     /// <summary>
@@ -55,7 +57,6 @@ public class Encoder : Module<Tensor, Tensor>
         _activationFunction = activationFunction;
 
         this.conv_in = torch.nn.Conv2d(this._inChannels, this._blockOutChannels[0], kernelSize: 3, stride: 1, padding: 1);
-        this.mid_block = null;
         this.down_blocks = new ModuleList<Module<Tensor, Tensor>>();
 
         var output_channel = _blockOutChannels[0];
@@ -75,10 +76,41 @@ public class Encoder : Module<Tensor, Tensor>
 
             this.down_blocks.Add(down_block);
         }
+
+        // mid
+        this.mid_block = new UNetMidBlock2D(
+            in_channels: _blockOutChannels[^1],
+            resnet_eps: 1e-6f,
+            resnet_act_fn: activationFunction,
+            output_scale_factor: 1,
+            resnet_time_scale_shift: "default",
+            attention_head_dim: _blockOutChannels[^1],
+            resnet_groups: normNumGroups,
+            add_attention: midBlockAddAttention);
+
+        // out
+        this.conv_norm_out = nn.GroupNorm(num_groups: normNumGroups, num_channels: _blockOutChannels[^1], eps: 1e-6f);
+        this.conv_act = nn.SiLU();
+        var conv_out_channels = doubleZ ? _outChannels * 2 : _outChannels;
+        this.conv_out = nn.Conv2d(_blockOutChannels[^1], conv_out_channels, kernelSize: 3, padding: Padding.Same);
     }
 
-    public override Tensor forward(Tensor x)
+    public override Tensor forward(Tensor sample)
     {
-        throw new NotImplementedException();
+        sample = this.conv_in.forward(sample);
+        // down
+        foreach (var down_block in this.down_blocks)
+        {
+            sample = down_block.forward(sample);
+        }
+
+        // mid
+        sample = this.mid_block.forward(sample);
+        // post-process
+        sample = this.conv_norm_out.forward(sample);
+        sample = this.conv_act.forward(sample);
+        sample = this.conv_out.forward(sample);
+
+        return sample;
     }
 }

@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 
 namespace SD;
 
-public class ResnetBlock2D : Module<Tensor, Tensor, Tensor>
+public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
 {
     private readonly bool pre_norm;
     private readonly int in_channels;
@@ -107,7 +107,7 @@ public class ResnetBlock2D : Module<Tensor, Tensor, Tensor>
             }
         }
 
-    public override Tensor forward(Tensor input_tensor, Tensor temb)
+    public override Tensor forward(Tensor input_tensor, Tensor? temb)
     {
         var hidden_states = input_tensor;
         hidden_states = this.norm1.forward(hidden_states);
@@ -127,10 +127,10 @@ public class ResnetBlock2D : Module<Tensor, Tensor, Tensor>
         if (this.time_emb_proj is not null)
         {
             if (!this.skip_time_act){
-                temb = this.nonlinearity.forward(temb);
+                temb = this.nonlinearity.forward(temb!);
             }
 
-            temb = this.time_emb_proj.forward(temb);
+            temb = this.time_emb_proj.forward(temb!);
             // temb = self.time_emb_proj(temb)[:, :, None, None]
             temb = temb.unsqueeze(2).unsqueeze(3);
         }

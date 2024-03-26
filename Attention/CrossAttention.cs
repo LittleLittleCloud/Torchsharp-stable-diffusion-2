@@ -1,10 +1,11 @@
 using static TorchSharp.torch.nn;
 using static TorchSharp.torch;
 using TorchSharp.Modules;
+using TorchSharp;
 
 namespace SD;
 
-public class CrossAttention : Module<Tensor, Tensor?, Tensor?, Tensor>
+public class CrossAttention : Module<Tensor, Tensor?, Tensor?, Tensor?, Tensor>
 {
     private readonly int inner_dim;
     private readonly int query_dim;
@@ -27,15 +28,15 @@ public class CrossAttention : Module<Tensor, Tensor?, Tensor?, Tensor>
 
     private readonly AttnProcessorBase processor;
 
-    private Module? group_norm;
-    private Module? spatial_norm;
-    private Module? norm_cross;
+    private Module<Tensor, Tensor>? group_norm;
+    private Module<Tensor, Tensor?, Tensor>? spatial_norm;
+    private Module<Tensor, Tensor>? norm_cross;
     private Module? add_k_proj;
     private Module? add_v_proj;
-    private Module to_q;
-    private Module? to_k;
-    private Module? to_v;
-    private ModuleList<Module> to_out;
+    private Module<Tensor, Tensor> to_q;
+    private Module<Tensor, Tensor> to_k;
+    private Module<Tensor, Tensor> to_v;
+    private ModuleList<Module<Tensor, Tensor>> to_out;
 
     /// <summary>
     /// Cross-Attention module.
@@ -147,7 +148,7 @@ public class CrossAttention : Module<Tensor, Tensor?, Tensor?, Tensor>
                 this.add_v_proj = Linear(this.added_kv_proj_dim.Value, this.inner_dim);
             }
 
-            this.to_out = new ModuleList<Module>();
+            this.to_out = new ModuleList<Module<Tensor, Tensor>>();
             this.to_out.Add(Linear(this.inner_dim, this.out_dim, hasBias: out_bias));
             this.to_out.Add(Dropout(dropout));
             RegisterComponents();
@@ -172,23 +173,24 @@ public class CrossAttention : Module<Tensor, Tensor?, Tensor?, Tensor>
     public int SliceableHeadDim => sliceable_head_dim;
     public int? AddedKvProjDim => added_kv_proj_dim;
     public bool OnlyCrossAttention => only_cross_attention;
-    public Module? GroupNorm => group_norm;
-    public Module? SpatialNorm => spatial_norm;
+    public Module<Tensor, Tensor>? GroupNorm => group_norm;
+    public Module<Tensor, Tensor?, Tensor>? SpatialNorm => spatial_norm;
     public Module? NormCross => norm_cross;
     public Module? AddKProj => add_k_proj;
     public Module? AddVProj => add_v_proj;
-    public Module ToQ => to_q;
-    public Module? ToK => to_k;
-    public Module? ToV => to_v;
-    public ModuleList<Module> ToOut => to_out;
+    public Module<Tensor, Tensor> ToQ => to_q;
+    public Module<Tensor, Tensor> ToK => to_k;
+    public Module<Tensor, Tensor> ToV => to_v;
+    public ModuleList<Module<Tensor, Tensor>> ToOut => to_out;
     public AttnProcessorBase? Processor => processor;
 
     public override Tensor forward(
         Tensor hidden_states,
         Tensor? encoder_hidden_states = null,
-        Tensor? attention_mask = null)
+        Tensor? attention_mask = null,
+        Tensor? temb = null)
     {
-        return this.processor.Process(this, hidden_states, encoder_hidden_states, attention_mask);
+        return this.processor.Process(this, hidden_states, encoder_hidden_states, attention_mask, temb);
     }
 
     /// <summary>
@@ -267,6 +269,104 @@ public class CrossAttention : Module<Tensor, Tensor?, Tensor?, Tensor>
             key = key.to(ScalarType.Float32);
         }
 
-        
+        Tensor baddbmm_input;
+        int beta;
+        if (attention_mask is not null)
+        {
+            baddbmm_input = torch.empty(new long[] { query.shape[0], query.shape[1], key.shape[1] }, dtype: dtype, device: query.device);
+            beta = 0;
+        }
+        else
+        {
+            baddbmm_input = attention_mask!;
+            beta = 1;
+        }
+
+        var attention_scores = baddbmm(baddbmm_input, query, key.transpose(-1, -2), beta: beta, alpha: this.scale);
+        baddbmm_input.Dispose();
+
+        if (this.upcast_softmax)
+        {
+            attention_scores = attention_scores.to(ScalarType.Float32);
+        }
+        var attention_probls = attention_scores.softmax(-1);
+        attention_scores.Dispose();
+
+        attention_probls = attention_probls.to(dtype);
+        return attention_probls;
+    }
+
+    /// <summary>
+    /// Prepare the attention mask for the attention computation.
+    /// </summary>
+    /// <param name="attention_mask">The attention mask to prepare.</param>
+    /// <param name="target_length">The target length of the attention mask. This is the length of the attention mask after padding.</param>
+    /// <param name="batch_size">The batch size, which is used to repeat the attention mask.</param>
+    /// <param name="out_dim">The output dimension of the attention mask. Can be either `3` or `4`.</param>
+    /// <returns></returns>
+    public Tensor? PrepareAttentionMask(
+        Tensor? attention_mask,
+        int target_length,
+        int batch_size,
+        int out_dim = 3)
+    {
+        var head_size = this.heads;
+        if (attention_mask is null)
+        {
+            return attention_mask;
+        }
+
+        var current_length = attention_mask.shape[1];
+        if (current_length != target_length)
+        {
+            attention_mask = nn.functional.pad(attention_mask, [0, target_length], value: 0.0f);
+        }
+
+        if (out_dim == 3)
+        {
+            if (attention_mask.shape[0] < batch_size * head_size)
+            {
+                attention_mask = attention_mask.repeat_interleave(head_size, 0);
+            }
+        }
+        else if (out_dim == 4)
+        {
+            attention_mask = attention_mask.unsqueeze(1);
+            attention_mask = attention_mask.repeat_interleave(head_size, 1);
+        }
+
+        return attention_mask;
+    }
+
+    /// <summary>
+    /// Normalize the encoder hidden states. Requires `self.norm_cross` to be specified when constructing the `Attention` class.
+    /// </summary>
+    public Tensor NormEncoderHiddenStates(Tensor encoder_hidden_states)
+    {
+        if (this.norm_cross is null)
+        {
+            throw new ArgumentException("norm_cross must be specified when constructing the Attention class.");
+        }
+
+        if (this.norm_cross is LayerNorm)
+        {
+            encoder_hidden_states = this.norm_cross.forward(encoder_hidden_states);
+        }
+        else if (this.norm_cross is GroupNorm)
+        {
+            // Group norm norms along the channels dimension and expects
+            // input to be in the shape of (N, C, *). In this case, we want
+            // to norm along the hidden dimension, so we need to move
+            // (batch_size, sequence_length, hidden_size) -> (batch_size, hidden_size, sequence_length)
+            encoder_hidden_states = encoder_hidden_states.transpose(1, 2);
+            encoder_hidden_states = this.norm_cross.forward(encoder_hidden_states);
+            encoder_hidden_states = encoder_hidden_states.transpose(1, 2);
+        }
+        else
+        {
+            throw new ArgumentException("norm_cross must be either LayerNorm or GroupNorm.");
+        }
+
+        return encoder_hidden_states;
     }
 }
