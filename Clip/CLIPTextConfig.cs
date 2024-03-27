@@ -48,4 +48,7 @@ public class CLIPTextConfig
 
     [JsonPropertyName("eos_token_id")]
     public int EosTokenId { get; set; } = 49407;
+
+    [JsonPropertyName("use_attention_mask")]
+    public bool UseAttentionMask { get; set; } = false;
 }
