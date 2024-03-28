@@ -53,6 +53,46 @@ public static class Utils
         };
     }
 
+    /// <summary>
+    /// This matches the implementation in Denoising Diffusion Probabilistic Models: Create sinusoidal timestep embeddings.
+    /// </summary>
+    /// <param name="timesteps">a 1-D Tensor of N indices, one per batch element. These may be fractional</param>
+    /// <param name="embedding_dim">the dimension of the output.</param>
+    /// <param name="flip_sin_to_cos"></param>
+    /// <param name="downscale_freq_shift"></param>
+    /// <param name="scale"></param>
+    /// <param name="max_period">controls the minimum frequency of the embeddings.</param>
+    /// <returns>an [N x dim] Tensor of positional embeddings.</returns>
+    public static Tensor GetTimestepEmbedding(
+        Tensor timesteps,
+        int embedding_dim,
+        bool flip_sin_to_cos = false,
+        float downscale_freq_shift = 1,
+        float scale = 1f,
+        int max_period = 10000)
+    {
+        var half_dim = embedding_dim / 2;
+        var exponent = -Math.Log(max_period) * torch.arange(0, half_dim, device: timesteps.device, dtype: ScalarType.Float32);
+        exponent = exponent / (half_dim - downscale_freq_shift);
+
+        var emb = torch.exp(exponent);
+        emb = timesteps.unsqueeze(1).to(ScalarType.Float32) * emb.unsqueeze(0);
+
+        emb = scale * emb;
+        emb = torch.cat([emb.sin(), emb.cos()], dim: 1);
+
+        if (flip_sin_to_cos)
+        {
+            emb = torch.cat([emb[.., half_dim..], emb[.., ..half_dim]], dim: -1);
+        }
+
+        if (embedding_dim % 2 == 1)
+        {
+            emb = nn.functional.pad(emb, [0, 1, 0, 0]);
+        }
+
+        return emb;
+    }
     public static Tensor PrecomputeThetaPosFrequencies(int headDim, int seqLen, string device, float theta = 10000.0f)
     {
         // As written in the paragraph 3.2.2 of the paper
@@ -82,12 +122,6 @@ public static class Utils
         return freqsComplex;
     }
 
-    // python
-    // def rotate_half(x):
-    // """Rotates half the hidden dims of the input."""
-    // x1 = x[..., : x.shape[-1] // 2]
-    // x2 = x[..., x.shape[-1] // 2 :]
-    // return torch.cat((-x2, x1), dim=-1)
     public static Tensor RotateHalf(Tensor x)
     {
         var x1 = x[.., .., .., ..(int)(x.shape[^1] / 2)];
@@ -96,35 +130,6 @@ public static class Utils
         return torch.cat([-x2, x1], dim: -1);
     }
 
-    // python
-//     # Copied from transformers.models.llama.modeling_llama.apply_rotary_pos_emb
-// def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
-//     """Applies Rotary Position Embedding to the query and key tensors.
-
-//     Args:
-//         q (`torch.Tensor`): The query tensor.
-//         k (`torch.Tensor`): The key tensor.
-//         cos (`torch.Tensor`): The cosine part of the rotary embedding.
-//         sin (`torch.Tensor`): The sine part of the rotary embedding.
-//         position_ids (`torch.Tensor`):
-//             The position indices of the tokens corresponding to the query and key tensors. For example, this can be
-//             used to pass offsetted position ids when working with a KV-cache.
-//         unsqueeze_dim (`int`, *optional*, defaults to 1):
-//             The 'unsqueeze_dim' argument specifies the dimension along which to unsqueeze cos[position_ids] and
-//             sin[position_ids] so that they can be properly broadcasted to the dimensions of q and k. For example, note
-//             that cos[position_ids] and sin[position_ids] have the shape [batch_size, seq_len, head_dim]. Then, if q and
-//             k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes
-//             cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k. Similarly, if q and k have
-//             the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
-//     Returns:
-//         `tuple(torch.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
-//     """
-//     cos = cos[position_ids].unsqueeze(unsqueeze_dim)
-//     sin = sin[position_ids].unsqueeze(unsqueeze_dim)
-//     q_embed = (q * cos) + (rotate_half(q) * sin)
-//     k_embed = (k * cos) + (rotate_half(k) * sin)
-//     return q_embed, k_embed
-    
     public static (Tensor, Tensor) ApplyRotaryPosEmb(Tensor q, Tensor k, Tensor cos, Tensor sin, Tensor positionIds, int unsqueezeDim = 1)
     {
         // The 'unsqueeze_dim' argument specifies the dimension along which to unsqueeze cos[position_ids] and
