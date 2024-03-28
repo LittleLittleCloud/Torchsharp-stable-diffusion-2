@@ -5,7 +5,7 @@ using TorchSharp;
 
 namespace SD;
 
-public class CrossAttention : Module<Tensor, Tensor?, Tensor?, Tensor?, Tensor>
+public class Attention : Module<Tensor, Tensor?, Tensor?, Tensor?, Tensor>
 {
     private readonly int inner_dim;
     private readonly int query_dim;
@@ -68,7 +68,7 @@ public class CrossAttention : Module<Tensor, Tensor?, Tensor?, Tensor?, Tensor>
     /// <param name="residual_connection">Set to `True` to add the residual connection to the output.</param>
     /// <param name="processor">The attention processor to use. If `None`, defaults to `AttnProcessor2_0` if `torch 2.x` is used and `AttnProcessor` otherwise.</param>
     /// <param name="out_dim">output dim</param>
-    public CrossAttention(
+    public Attention(
         int query_dim,
         int? cross_attention_dim = null,
         int heads = 8,
@@ -91,7 +91,7 @@ public class CrossAttention : Module<Tensor, Tensor?, Tensor?, Tensor?, Tensor>
         AttnProcessorBase? processor = null,
         int? out_dim = null,
         bool _from_deprecated_attn_block = false)
-        : base(nameof(CrossAttention))
+        : base(nameof(Attention))
         {
             this.inner_dim = out_dim ?? dim_head * heads;
             this.query_dim = query_dim;

@@ -15,7 +15,7 @@ public class UNetMidBlock2D : Module<Tensor, Tensor?, Tensor>
     //     add_attention: bool = True,
     //     attention_head_dim: int = 1,
     //     output_scale_factor: float = 1.0,
-    private readonly ModuleList<CrossAttention?> attentions;
+    private readonly ModuleList<Attention?> attentions;
     private readonly ModuleList<Module<Tensor, Tensor?, Tensor>> resnets;
     private readonly bool add_attention;
     public UNetMidBlock2D(
@@ -75,13 +75,13 @@ public class UNetMidBlock2D : Module<Tensor, Tensor?, Tensor>
             );
         }
 
-        var attentions = new ModuleList<CrossAttention?>();
+        var attentions = new ModuleList<Attention?>();
         for(int i = 0; i!= num_layers; ++i)
         {
             if (add_attention)
             {
                 attentions.Add(
-                    new CrossAttention(
+                    new Attention(
                         query_dim: in_channels,
                         heads: in_channels / attention_head_dim,
                         dim_head: attention_head_dim,

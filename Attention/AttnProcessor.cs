@@ -5,7 +5,7 @@ using static TorchSharp.torch;
 public abstract class AttnProcessorBase
 {
     abstract public Tensor Process(
-        CrossAttention attn,
+        Attention attn,
         Tensor hidden_states,
         Tensor? encoder_hidden_states = null,
         Tensor? attention_mask = null,
@@ -15,7 +15,7 @@ public abstract class AttnProcessorBase
 public class AttnProcessor2_0 : AttnProcessorBase
 {
     public override Tensor Process(
-        CrossAttention attn,
+        Attention attn,
         Tensor hidden_states,
         Tensor? encoder_hidden_states = null,
         Tensor? attention_mask = null,
