@@ -77,7 +77,6 @@ public class UNetMidBlock2DCrossAttn: Module<UNetMidBlock2DCrossAttnInput, Tenso
                 non_linearity: resnet_act_fn,
                 output_scale_factor: (float)output_scale_factor,
                 pre_norm: resnet_pre_norm));
-        )
         for(int i = 0; i != num_layers; ++i)
         {
             resnets.Add(

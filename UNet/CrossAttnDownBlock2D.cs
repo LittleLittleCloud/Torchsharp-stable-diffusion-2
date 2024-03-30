@@ -1,5 +1,5 @@
 namespace SD;
-public class CrossAttnDownBlock2D : Module<Tensor, Tensor?, Tensor?, Tensor?, Tensor?, Tensor?, (Tensor, Tensor[])>
+public class CrossAttnDownBlock2D : Module<DownBlock2DInput, DownBlock2DOutput>
 {
     private readonly bool has_cross_attention;
     private readonly int num_attention_heads;
@@ -18,12 +18,12 @@ public class CrossAttnDownBlock2D : Module<Tensor, Tensor?, Tensor?, Tensor?, Te
         double resnet_eps = 1e-6,
         string resnet_time_scale_shift = "default",
         string resnet_act_fn = "swish",
-        int resnet_groups = 32,
+        int? resnet_groups = 32,
         bool resnet_pre_norm = true,
-        int num_attention_heads = 1,
-        int cross_attention_dim = 1280,
+        int? num_attention_heads = 1,
+        int? cross_attention_dim = 1280,
         double output_scale_factor = 1.0,
-        int downsample_padding = 1,
+        int? downsample_padding = 1,
         bool add_downsample = true,
         bool dual_cross_attention = false,
         bool use_linear_projection = false,
@@ -99,14 +99,15 @@ public class CrossAttnDownBlock2D : Module<Tensor, Tensor?, Tensor?, Tensor?, Te
         }
     }
 
-    public override (Tensor, Tensor[]) forward(
-        Tensor hidden_states,
-        Tensor? temb = null,
-        Tensor? encoder_hidden_states = null,
-        Tensor? attention_mask = null,
-        Tensor? encoder_attention_mask = null,
-        Tensor? additional_residuals = null)
+    public override DownBlock2DOutput forward(DownBlock2DInput input)
     {
+        var hidden_states = input.HiddenStates;
+        var temb = input.Temb;
+        var encoder_hidden_states = input.EncoderHiddenStates;
+        var attention_mask = input.AttentionMask;
+        var encoder_attention_mask = input.EncoderAttentionMask;
+        var additional_residuals = input.AdditionalResiduals;
+
         List<Tensor> output_states = new List<Tensor>();
 
         var blocks = this.resnets.Zip(this.attentions, (resnet, attention) => (resnet, attention)).ToArray();
@@ -154,8 +155,6 @@ public class CrossAttnDownBlock2D : Module<Tensor, Tensor?, Tensor?, Tensor?, Te
             output_states.Add(hidden_states);
         }
 
-        return (hidden_states, output_states.ToArray());
+        return new DownBlock2DOutput(hidden_states, output_states.ToArray());
     }
-    
-
 }

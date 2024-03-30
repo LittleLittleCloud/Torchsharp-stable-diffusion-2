@@ -8,6 +8,7 @@ using TorchSharp.Modules;
 using TorchSharp;
 using static TorchSharp.torch;
 using static TorchSharp.torch.nn;
+using SD;
 
 public static class Utils
 {
@@ -92,6 +93,87 @@ public static class Utils
         }
 
         return emb;
+    }
+
+    public static Module<DownBlock2DInput, DownBlock2DOutput> GetDownBlock(
+        string down_block_type,
+        int num_layers,
+        int in_channels,
+        int out_channels,
+        int temb_channels,
+        bool add_downsample,
+        float resnet_eps,
+        string resnet_act_fn,
+        int transformer_layers_per_block = 1,
+        int? num_attention_heads = null,
+        int? resnet_groups = null,
+        int? cross_attention_dim = null,
+        int? downsample_padding = null,
+        bool dual_cross_attention = false,
+        bool use_linear_projection = false,
+        bool only_cross_attention = false,
+        bool upcast_attention = false,
+        string resnet_time_scale_shift = "default",
+        string attention_type = "default",
+        bool resnet_skip_time_act = false,
+        float resnet_out_scale_factor = 1.0f,
+        string? cross_attention_norm = null,
+        int? attention_head_dim = null,
+        string? downsample_type = null,
+        float dropout = 0.0f)
+    {
+        // If attn head dim is not defined, we default it to the number of heads
+        attention_head_dim ??= num_attention_heads;
+
+        down_block_type = down_block_type.StartsWith("UNetRes") ? down_block_type.Substring(7) : down_block_type;
+
+        if (down_block_type == nameof(DownBlock2D))
+        {
+            return new DownBlock2D(
+                num_layers: num_layers,
+                in_channels: in_channels,
+                out_channels: out_channels,
+                temb_channels: temb_channels,
+                dropout: dropout,
+                add_downsample: add_downsample,
+                resnet_eps: resnet_eps,
+                resnet_act_fn: resnet_act_fn,
+                resnet_groups: resnet_groups,
+                downsample_padding: downsample_padding,
+                resnet_time_scale_shift: resnet_time_scale_shift);
+        }
+        else if (down_block_type == nameof(CrossAttnDownBlock2D))
+        {
+            if (cross_attention_dim is null)
+            {
+                throw new ArgumentException("Cross attention dimension must be defined for CrossAttnDownBlock2D", nameof(cross_attention_dim));
+            }
+
+            return new CrossAttnDownBlock2D(
+                num_layers: num_layers,
+                // transformer_layers_per_block: transformer_layers_per_block,
+                in_channels: in_channels,
+                out_channels: out_channels,
+                temb_channels: temb_channels,
+                dropout: dropout,
+                add_downsample: add_downsample,
+                resnet_eps: resnet_eps,
+                resnet_act_fn: resnet_act_fn,
+                resnet_groups: resnet_groups,
+                downsample_padding: downsample_padding,
+                cross_attention_dim: cross_attention_dim,
+                num_attention_heads: num_attention_heads,
+                dual_cross_attention: dual_cross_attention,
+                use_linear_projection: use_linear_projection,
+                only_cross_attention: only_cross_attention,
+                upcast_attention: upcast_attention,
+                resnet_time_scale_shift: resnet_time_scale_shift,
+                attention_type: attention_type);
+        }
+        else
+        {
+            throw new ArgumentException("Invalid down block type", nameof(down_block_type));
+        };
     }
     public static Tensor PrecomputeThetaPosFrequencies(int headDim, int seqLen, string device, float theta = 10000.0f)
     {

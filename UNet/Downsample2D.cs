@@ -9,7 +9,7 @@ public class Downsample2D : Module<Tensor, Tensor>
     private readonly int channels;
     private readonly int out_channels;
     private readonly bool use_conv;
-    private readonly int padding;
+    private readonly int? padding;
     private readonly string name;
 
     private readonly Module<Tensor, Tensor>? conv;
@@ -19,7 +19,7 @@ public class Downsample2D : Module<Tensor, Tensor>
         int channels,
         bool use_conv = false,
         int? out_channels = null,
-        int padding = 1,
+        int? padding = 1,
         string name = "conv",
         int kernel_size = 3,
         string? norm_type = null,
