@@ -1,0 +1,6 @@
+﻿prompt_embeds: sum: 55.8623  dtype: Float32 shape: [1,7,1024]
+output: sum: 144.5073  dtype: Float32 shape: [1,4,96,96]
+output: sum: 144.5071  dtype: Float32 shape: [1,4,96,96]
+output: sum: 144.5068  dtype: Float32 shape: [1,4,96,96]
+output: sum: 144.5067  dtype: Float32 shape: [1,4,96,96]
+output: sum: 144.5066  dtype: Float32 shape: [1,4,96,96]

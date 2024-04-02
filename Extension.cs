@@ -28,10 +28,31 @@ public static class Extension
         var state_dict = model.state_dict();
         // preview state_dict
         int i = 0;
-        foreach (var (key, value) in state_dict.OrderBy(x => x.Key))
+        foreach (var (key, value) in state_dict.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
         {
             var str = value.Peek(key);
             sb.AppendLine($"{i}: {str}");
+            i++;
+        }
+
+        var res = sb.ToString();
+
+        Console.WriteLine(res);
+
+        return res;
+    }
+
+    public static string Peek_Shape(this nn.Module model)
+    {
+        var sb = new StringBuilder();
+        var state_dict = model.state_dict();
+        // preview state_dict
+        int i = 0;
+        foreach (var (key, value) in state_dict.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            // shape str: [x, y, z]
+            var shapeStr = string.Join(", ", value.shape);
+            sb.AppendLine($"{i}: {key} shape: [{shapeStr}]");
             i++;
         }
 

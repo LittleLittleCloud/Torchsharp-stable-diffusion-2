@@ -118,7 +118,8 @@ public class Decoder : Module<Tensor, Tensor?, Tensor>
         var upscale_dtype = this.up_blocks[0].parameters().First().dtype;
         
         // middle
-        sample = this.mid_block.forward(sample, latent_embeds);
+        var input = new UNetMidBlock2DInput(sample, latent_embeds);
+        sample = this.mid_block.forward(input);
         sample = sample.to(upscale_dtype);
 
         // up

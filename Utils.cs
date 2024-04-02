@@ -8,6 +8,7 @@ using TorchSharp.Modules;
 using TorchSharp;
 using static TorchSharp.torch;
 using static TorchSharp.torch.nn;
+using SD;
 
 public static class Utils
 {
@@ -53,6 +54,271 @@ public static class Utils
         };
     }
 
+    /// <summary>
+    /// This matches the implementation in Denoising Diffusion Probabilistic Models: Create sinusoidal timestep embeddings.
+    /// </summary>
+    /// <param name="timesteps">a 1-D Tensor of N indices, one per batch element. These may be fractional</param>
+    /// <param name="embedding_dim">the dimension of the output.</param>
+    /// <param name="flip_sin_to_cos"></param>
+    /// <param name="downscale_freq_shift"></param>
+    /// <param name="scale"></param>
+    /// <param name="max_period">controls the minimum frequency of the embeddings.</param>
+    /// <returns>an [N x dim] Tensor of positional embeddings.</returns>
+    public static Tensor GetTimestepEmbedding(
+        Tensor timesteps,
+        int embedding_dim,
+        bool flip_sin_to_cos = false,
+        float downscale_freq_shift = 1,
+        float scale = 1f,
+        int max_period = 10000)
+    {
+        var half_dim = embedding_dim / 2;
+        var exponent = -Math.Log(max_period) * torch.arange(0, half_dim, device: timesteps.device, dtype: ScalarType.Float32);
+        exponent = exponent / (half_dim - downscale_freq_shift);
+
+        var emb = torch.exp(exponent);
+        emb = timesteps.unsqueeze(1).to(ScalarType.Float32) * emb.unsqueeze(0);
+
+        emb = scale * emb;
+        emb = torch.cat([emb.sin(), emb.cos()], dim: 1);
+
+        if (flip_sin_to_cos)
+        {
+            emb = torch.cat([emb[.., half_dim..], emb[.., ..half_dim]], dim: -1);
+        }
+
+        if (embedding_dim % 2 == 1)
+        {
+            emb = nn.functional.pad(emb, [0, 1, 0, 0]);
+        }
+
+        return emb;
+    }
+
+    public static Module<DownBlock2DInput, DownBlock2DOutput> GetDownBlock(
+        string down_block_type,
+        int num_layers,
+        int in_channels,
+        int out_channels,
+        int temb_channels,
+        bool add_downsample,
+        float resnet_eps,
+        string resnet_act_fn,
+        int transformer_layers_per_block = 1,
+        int? num_attention_heads = null,
+        int? resnet_groups = null,
+        int? cross_attention_dim = null,
+        int? downsample_padding = null,
+        bool dual_cross_attention = false,
+        bool use_linear_projection = false,
+        bool only_cross_attention = false,
+        bool upcast_attention = false,
+        string resnet_time_scale_shift = "default",
+        string attention_type = "default",
+        bool resnet_skip_time_act = false,
+        float resnet_out_scale_factor = 1.0f,
+        string? cross_attention_norm = null,
+        int? attention_head_dim = null,
+        string? downsample_type = null,
+        float dropout = 0.0f)
+    {
+        // If attn head dim is not defined, we default it to the number of heads
+        attention_head_dim ??= num_attention_heads;
+
+        down_block_type = down_block_type.StartsWith("UNetRes") ? down_block_type.Substring(7) : down_block_type;
+
+        if (down_block_type == nameof(DownBlock2D))
+        {
+            return new DownBlock2D(
+                num_layers: num_layers,
+                in_channels: in_channels,
+                out_channels: out_channels,
+                temb_channels: temb_channels,
+                dropout: dropout,
+                add_downsample: add_downsample,
+                resnet_eps: resnet_eps,
+                resnet_act_fn: resnet_act_fn,
+                resnet_groups: resnet_groups,
+                downsample_padding: downsample_padding,
+                resnet_time_scale_shift: resnet_time_scale_shift);
+        }
+        else if (down_block_type == nameof(CrossAttnDownBlock2D))
+        {
+            if (cross_attention_dim is null)
+            {
+                throw new ArgumentException("Cross attention dimension must be defined for CrossAttnDownBlock2D", nameof(cross_attention_dim));
+            }
+
+            return new CrossAttnDownBlock2D(
+                num_layers: num_layers,
+                // transformer_layers_per_block: transformer_layers_per_block,
+                in_channels: in_channels,
+                out_channels: out_channels,
+                temb_channels: temb_channels,
+                dropout: dropout,
+                add_downsample: add_downsample,
+                resnet_eps: resnet_eps,
+                resnet_act_fn: resnet_act_fn,
+                resnet_groups: resnet_groups,
+                downsample_padding: downsample_padding,
+                cross_attention_dim: cross_attention_dim,
+                num_attention_heads: num_attention_heads,
+                dual_cross_attention: dual_cross_attention,
+                use_linear_projection: use_linear_projection,
+                only_cross_attention: only_cross_attention,
+                upcast_attention: upcast_attention,
+                resnet_time_scale_shift: resnet_time_scale_shift,
+                attention_type: attention_type);
+        }
+        else
+        {
+            throw new ArgumentException("Invalid down block type", nameof(down_block_type));
+        };
+    }
+    
+    public static Module<UNetMidBlock2DInput, Tensor> GetMidBlock(
+        string mid_block_type,
+        int temb_channels,
+        int in_channels,
+        float resnet_eps,
+        string resnet_act_fn,
+        int resnet_groups,
+        float output_scale_factor = 1.0f,
+        int transformer_layers_per_block = 1,
+        int? num_attention_heads = null,
+        int? cross_attention_dim = null,
+        bool dual_cross_attention = false,
+        bool use_linear_projection = false,
+        bool mid_block_only_cross_attention = false,
+        bool upcast_attention = false,
+        string resnet_time_scale_shift = "default",
+        string attention_type = "default",
+        bool resnet_skip_time_act = false,
+        string? cross_attention_norm = null,
+        int? attention_head_dim = 1,
+        float dropout = 0.0f)
+    {
+        if (mid_block_type == nameof(UNetMidBlock2D))
+        {
+            return new UNetMidBlock2D(
+                in_channels: in_channels,
+                temb_channels: temb_channels,
+                dropout: dropout,
+                num_layers: 0,
+                resnet_eps: resnet_eps,
+                resnet_act_fn: resnet_act_fn,
+                output_scale_factor: output_scale_factor,
+                resnet_groups: resnet_groups,
+                resnet_time_scale_shift: resnet_time_scale_shift,
+                add_attention: false);
+        }
+        else if (mid_block_type == nameof(UNetMidBlock2DCrossAttn))
+        {
+            var transformer_layers_per_block_list = Enumerable.Repeat(transformer_layers_per_block, 1).ToArray();
+
+            return new UNetMidBlock2DCrossAttn(
+                transformer_layers_per_block: transformer_layers_per_block_list,
+                in_channels: in_channels,
+                temb_channels: temb_channels,
+                dropout: dropout,
+                resnet_eps: resnet_eps,
+                resnet_act_fn: resnet_act_fn,
+                output_scale_factor: output_scale_factor,
+                resnet_time_scale_shift: resnet_time_scale_shift,
+                cross_attention_dim: cross_attention_dim,
+                num_attention_heads: num_attention_heads ?? 1,
+                resnet_groups: resnet_groups,
+                dual_cross_attention: dual_cross_attention,
+                use_linear_projection: use_linear_projection,
+                upcast_attention: upcast_attention,
+                attention_type: attention_type);
+        }
+        else
+        {
+            throw new ArgumentException("Invalid mid block type", nameof(mid_block_type));
+        }
+    }
+    
+    public static Module<UpBlock2DInput, Tensor> GetUpBlock(
+        string up_block_type,
+        int num_layers,
+        int in_channels,
+        int out_channels,
+        int prev_output_channel,
+        int temb_channels,
+        bool add_upsample,
+        float resnet_eps,
+        string resnet_act_fn,
+        int? resolution_idx = null,
+        int transformer_layers_per_block = 1,
+        int num_attention_heads = 1,
+        int resnet_groups = 32,
+        int cross_attention_dim = 1280,
+        bool dual_cross_attention = false,
+        bool use_linear_projection = false,
+        bool only_cross_attention = false,
+        bool upcast_attention = false,
+        string resnet_time_scale_shift = "default",
+        string attention_type = "default",
+        bool resnet_skip_time_act = false,
+        float resnet_out_scale_factor = 1.0f,
+        string? cross_attention_norm = null,
+        int? attention_head_dim = null,
+        string? upsample_type = null,
+        float dropout = 0.0f)
+    {
+        attention_head_dim = attention_head_dim ?? num_attention_heads;
+        up_block_type = up_block_type.StartsWith("UNetRes") ? up_block_type.Substring(7) : up_block_type;
+
+        if (up_block_type == nameof(UpBlock2D))
+        {
+            return new UpBlock2D(
+                num_layers: num_layers,
+                in_channels: in_channels,
+                out_channels: out_channels,
+                prev_output_channel: prev_output_channel,
+                temb_channels: temb_channels,
+                resolution_idx: resolution_idx,
+                dropout: dropout,
+                add_upsample: add_upsample,
+                resnet_eps: resnet_eps,
+                resnet_act_fn: resnet_act_fn,
+                resnet_groups: resnet_groups,
+                resnet_time_scale_shift: resnet_time_scale_shift);
+        }
+        else if (up_block_type == nameof(CrossAttnUpBlock2D))
+        {
+            var transformer_layers_per_block_list = Enumerable.Repeat(1, num_layers).ToArray();
+
+            return new CrossAttnUpBlock2D(
+                num_layers: num_layers,
+                transformer_layers_per_block: transformer_layers_per_block_list,
+                in_channels: in_channels,
+                out_channels: out_channels,
+                prev_output_channel: prev_output_channel,
+                temb_channels: temb_channels,
+                resolution_idx: resolution_idx,
+                dropout: dropout,
+                add_upsample: add_upsample,
+                resnet_eps: resnet_eps,
+                resnet_act_fn: resnet_act_fn,
+                resnet_groups: resnet_groups,
+                cross_attention_dim: cross_attention_dim,
+                num_attention_heads: num_attention_heads,
+                dual_cross_attention: dual_cross_attention,
+                use_linear_projection: use_linear_projection,
+                only_cross_attention: only_cross_attention,
+                upcast_attention: upcast_attention,
+                resnet_time_scale_shift: resnet_time_scale_shift,
+                attention_type: attention_type);
+                
+        }
+        else
+        {
+            throw new ArgumentException("Invalid up block type", nameof(up_block_type));
+        }
+    }
+
     public static Tensor PrecomputeThetaPosFrequencies(int headDim, int seqLen, string device, float theta = 10000.0f)
     {
         // As written in the paragraph 3.2.2 of the paper
@@ -82,12 +348,6 @@ public static class Utils
         return freqsComplex;
     }
 
-    // python
-    // def rotate_half(x):
-    // """Rotates half the hidden dims of the input."""
-    // x1 = x[..., : x.shape[-1] // 2]
-    // x2 = x[..., x.shape[-1] // 2 :]
-    // return torch.cat((-x2, x1), dim=-1)
     public static Tensor RotateHalf(Tensor x)
     {
         var x1 = x[.., .., .., ..(int)(x.shape[^1] / 2)];
@@ -96,35 +356,6 @@ public static class Utils
         return torch.cat([-x2, x1], dim: -1);
     }
 
-    // python
-//     # Copied from transformers.models.llama.modeling_llama.apply_rotary_pos_emb
-// def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
-//     """Applies Rotary Position Embedding to the query and key tensors.
-
-//     Args:
-//         q (`torch.Tensor`): The query tensor.
-//         k (`torch.Tensor`): The key tensor.
-//         cos (`torch.Tensor`): The cosine part of the rotary embedding.
-//         sin (`torch.Tensor`): The sine part of the rotary embedding.
-//         position_ids (`torch.Tensor`):
-//             The position indices of the tokens corresponding to the query and key tensors. For example, this can be
-//             used to pass offsetted position ids when working with a KV-cache.
-//         unsqueeze_dim (`int`, *optional*, defaults to 1):
-//             The 'unsqueeze_dim' argument specifies the dimension along which to unsqueeze cos[position_ids] and
-//             sin[position_ids] so that they can be properly broadcasted to the dimensions of q and k. For example, note
-//             that cos[position_ids] and sin[position_ids] have the shape [batch_size, seq_len, head_dim]. Then, if q and
-//             k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes
-//             cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k. Similarly, if q and k have
-//             the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
-//     Returns:
-//         `tuple(torch.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
-//     """
-//     cos = cos[position_ids].unsqueeze(unsqueeze_dim)
-//     sin = sin[position_ids].unsqueeze(unsqueeze_dim)
-//     q_embed = (q * cos) + (rotate_half(q) * sin)
-//     k_embed = (k * cos) + (rotate_half(k) * sin)
-//     return q_embed, k_embed
-    
     public static (Tensor, Tensor) ApplyRotaryPosEmb(Tensor q, Tensor k, Tensor cos, Tensor sin, Tensor positionIds, int unsqueezeDim = 1)
     {
         // The 'unsqueeze_dim' argument specifies the dimension along which to unsqueeze cos[position_ids] and

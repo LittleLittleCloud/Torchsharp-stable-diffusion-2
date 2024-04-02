@@ -109,7 +109,8 @@ public class Encoder : Module<Tensor, Tensor>
         }
         sample.Peek("sample");
         // mid
-        sample = this.mid_block.forward(sample);
+        var input = new UNetMidBlock2DInput(sample);
+        sample = this.mid_block.forward(input);
         // post-process
         sample = this.conv_norm_out.forward(sample);
         sample = this.conv_act.forward(sample);
