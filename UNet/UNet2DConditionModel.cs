@@ -8,6 +8,34 @@ namespace SD;
 
 public class UNet2DConditionModelInput
 {
+    public UNet2DConditionModelInput(
+        Tensor sample,
+        Tensor timestep,
+        Tensor encoderHiddenStates,
+        Tensor? classLabels = null,
+        Tensor? timestepCond = null,
+        Tensor? attentionMask = null,
+        Dictionary<string, object>? crossAttentionKwargs = null,
+        Dictionary<string, Tensor>? addedCondKwargs = null,
+        Tensor[]? downBlockAdditionalResiduals = null,
+        Tensor? midBlockAditionalResidual = null,
+        Tensor[]? downIntrablockAdditionalResiduals = null,
+        Tensor? encoderAttentionMask = null)
+    {
+        Sample = sample;
+        Timestep = timestep;
+        EncoderHiddenStates = encoderHiddenStates;
+        ClassLabels = classLabels;
+        TimestepCond = timestepCond;
+        AttentionMask = attentionMask;
+        CrossAttentionKwargs = crossAttentionKwargs;
+        AddedCondKwargs = addedCondKwargs;
+        DownBlockAdditionalResiduals = downBlockAdditionalResiduals;
+        MidBlockAditionalResidual = midBlockAditionalResidual;
+        DownIntrablockAdditionalResiduals = downIntrablockAdditionalResiduals;
+        EncoderAttentionMask = encoderAttentionMask;
+    }
+    
     public Tensor Sample {get;}
     public Tensor Timestep {get;}
     public Tensor EncoderHiddenStates {get;}
@@ -340,8 +368,9 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
 
         // 1. time
         var t_emb = this.get_time_embed(sample, input.Timestep);
+        t_emb.Peek("unet_t_emb");
         var emb = this.time_embedding.forward(t_emb, input.TimestepCond);
-
+        emb.Peek("unet_emb");
         // class emb is null
 
         // aug_emb is null
@@ -372,7 +401,7 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
         {
             var downBlockInput = new DownBlock2DInput(
                 hiddenStates: sample,
-                temb: t_emb,
+                temb: emb,
                 encoderHiddenStates: encoder_hidden_states,
                 attentionMask: attention_mask,
                 encoderAttentionMask: encoder_attention_mask,
@@ -389,7 +418,7 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
         {
             var midBlockInput = new UNetMidBlock2DInput(
                 hiddenStates: sample,
-                temb: t_emb,
+                temb: emb,
                 encoderHiddenStates: encoder_hidden_states,
                 attentionMask: attention_mask,
                 crossAttentionKwargs: input.CrossAttentionKwargs,
@@ -423,7 +452,7 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
             var upBlockInput = new UpBlock2DInput(
                 hiddenStates: sample,
                 resHiddenStatesTuple: res_samples,
-                temb: t_emb,
+                temb: emb,
                 encoderHiddenStates: encoder_hidden_states,
                 crossAttentionKwargs: input.CrossAttentionKwargs,
                 upsampleSize: upsample_size,
@@ -471,7 +500,7 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
         var location = Path.Combine(pretrainedModelNameOrPath, modelWeightName);
 
         var loadedParameters = new Dictionary<string, bool>();
-        // model.load_safetensors(location, strict: false, loadedParameters: loadedParameters);
+        model.load_safetensors(location, strict: false, loadedParameters: loadedParameters);
 
         return model;
     }
