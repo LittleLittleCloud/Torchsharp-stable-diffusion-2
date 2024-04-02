@@ -77,7 +77,7 @@ public class CrossAttnUpBlock2D : Module<UpBlock2DInput, Tensor>
 
         this.has_cross_attention = true;
         this.num_attention_heads = num_attention_heads;
-        transformer_layers_per_block = transformer_layers_per_block ?? Enumerable.Repeat(num_layers, 1).ToArray();
+        transformer_layers_per_block = transformer_layers_per_block ?? Enumerable.Repeat(1, num_layers).ToArray();
 
         for (int i = 0; i != num_layers; ++i)
         {
@@ -102,7 +102,7 @@ public class CrossAttnUpBlock2D : Module<UpBlock2DInput, Tensor>
                 attentions.Add(
                     new Transformer2DModel(
                         num_attention_heads: num_attention_heads,
-                        out_channels: out_channels / num_attention_heads,
+                        attention_head_dim: out_channels / num_attention_heads,
                         in_channels: out_channels,
                         num_layers: transformer_layers_per_block[i],
                         cross_attention_dim: cross_attention_dim,

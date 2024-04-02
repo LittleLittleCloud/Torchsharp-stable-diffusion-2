@@ -101,7 +101,6 @@ public class Transformer2DModel : Module<Tensor, Tensor?, Tensor?,Tensor?, Tenso
         {
             throw new ArgumentNullException("num_embeds_ada_norm");
         }
-
         var inner_dim = attention_head_dim * num_attention_heads;
         this.is_input_continuous = (in_channels is not null) && (patch_size is null);
         this.is_input_vectorized = false;
@@ -148,11 +147,11 @@ public class Transformer2DModel : Module<Tensor, Tensor?, Tensor?,Tensor?, Tenso
         {
             if (this.use_linear_projection)
             {
-                this.proj_out = Linear(inner_dim, out_channels!.Value);
+                this.proj_out = Linear(inner_dim, in_channels!.Value);
             }
             else
             {
-                this.proj_out = Conv2d(inner_dim, out_channels!.Value, kernelSize: 1, stride: 1, padding: Padding.Valid);
+                this.proj_out = Conv2d(inner_dim, in_channels!.Value, kernelSize: 1, stride: 1, padding: Padding.Valid);
             }
         }
     }

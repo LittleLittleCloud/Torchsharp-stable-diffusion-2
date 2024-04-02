@@ -1,7 +1,6 @@
 namespace SD;
 public class FeedForward : Module<Tensor, Tensor>
 {
-    private readonly Module<Tensor, Tensor> act_fn;
     private readonly Module<Tensor, Tensor> dropout;
     private readonly Linear linear_cls;
     private readonly ModuleList<Module<Tensor, Tensor>> net;
@@ -19,6 +18,7 @@ public class FeedForward : Module<Tensor, Tensor>
     {
         inner_dim = inner_dim ?? (int)(dim * mult);
         dim_out = dim_out ?? dim;
+        var act_fn = new GEGLU(dim, inner_dim.Value, bias);
         if (activation_fn == "geglu")
         {
             act_fn = new GEGLU(dim, inner_dim.Value, bias);

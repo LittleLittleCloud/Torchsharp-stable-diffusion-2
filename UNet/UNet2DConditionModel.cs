@@ -1,6 +1,8 @@
 using static TorchSharp.torch.nn;
 using static TorchSharp.torch;
 using TorchSharp.Modules;
+using System.Text.Json;
+using TorchSharp.PyBridge;
 
 namespace SD;
 
@@ -38,8 +40,6 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
         // when this library was created. The incorrect naming was only discovered much later in https://github.com/huggingface/diffusers/issues/2011#issuecomment-1547958131
         // Changing `attention_head_dim` to `num_attention_heads` for 40,000+ configurations is too backwards breaking
         // which is why we correct for the naming here.
-
-        var num_attention_heads = config.NumAttentionHeads ?? config.AttentionHeadDim;
 
         // TODO check config
 
@@ -82,8 +82,8 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
         this.up_blocks = new ModuleList<Module<UpBlock2DInput, Tensor>>();
 
         var only_cross_attention_list = Enumerable.Repeat(config.OnlyCrossAttention, config.DownBlockTypes.Length).ToList();
-        var num_attention_heads_list = Enumerable.Repeat(num_attention_heads, config.DownBlockTypes.Length).ToList();
-        var attention_head_dim_list = Enumerable.Repeat(config.AttentionHeadDim, config.DownBlockTypes.Length).ToList();
+        var num_attention_heads_list = config.NumAttentionHeads != null ? Enumerable.Repeat(config.NumAttentionHeads!.Value, config.DownBlockTypes.Length).ToList() : config.AttentionHeadDim.ToList();
+        var attention_head_dim_list = config.AttentionHeadDim;
         var cross_attention_dim_list = Enumerable.Repeat(config.CrossAttentionDim, config.DownBlockTypes.Length).ToList();
         var layers_per_block_list = Enumerable.Repeat(config.LayersPerBlock, config.DownBlockTypes.Length).ToList();
         var transformer_layers_per_block_list = Enumerable.Repeat(config.TransformerLayersPerBlock, config.DownBlockTypes.Length).ToList();
@@ -223,6 +223,8 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
             outputChannel: config.OutChannels,
             kernelSize: config.ConvOutKernel,
             padding: conv_out_padding);
+
+        this.RegisterComponents();
     }
     private readonly UNet2DConditionModelConfig config;
     private readonly int? sample_size;
@@ -441,5 +443,36 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
         sample = this.conv_out.forward(sample);
 
         return sample;
-    }   
+    }
+
+    public static UNet2DConditionModel FromPretrained(
+        string pretrainedModelNameOrPath,
+        string configName = "config.json",
+        string modelWeightName = "diffusion_pytorch_model",
+        bool useSafeTensor = true,
+        ScalarType torchDtype = ScalarType.Float32
+    )
+    {
+        var configPath = Path.Combine(pretrainedModelNameOrPath, configName);
+        var json = File.ReadAllText(configPath);
+        var config = JsonSerializer.Deserialize<UNet2DConditionModelConfig>(json) ?? throw new ArgumentNullException("Config can't be null");
+
+        var model = new UNet2DConditionModel(config);
+
+        modelWeightName = (useSafeTensor, torchDtype) switch
+        {
+            (true, ScalarType.Float32) => $"{modelWeightName}.safetensors",
+            (true, ScalarType.BFloat16) => $"{modelWeightName}.fp16.safetensors",
+            (false, ScalarType.Float32) => $"{modelWeightName}.bin",
+            (false, ScalarType.BFloat16) => $"{modelWeightName}.fp16.bin",
+            _ => throw new ArgumentException("Invalid arguments for useSafeTensor and torchDtype")
+        };
+
+        var location = Path.Combine(pretrainedModelNameOrPath, modelWeightName);
+
+        var loadedParameters = new Dictionary<string, bool>();
+        // model.load_safetensors(location, strict: false, loadedParameters: loadedParameters);
+
+        return model;
+    }
 }

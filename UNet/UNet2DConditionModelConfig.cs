@@ -83,7 +83,7 @@ public class UNet2DConditionModelConfig
     public string? EncoderHidDimType {get; set;} = null;
 
     [JsonPropertyName("attention_head_dim")]
-    public int AttentionHeadDim {get; set;} = 8;
+    public int[] AttentionHeadDim {get; set;} = [5, 10, 20, 20];
 
     [JsonPropertyName("num_attention_heads")]
     public int? NumAttentionHeads {get; set;} = null;

@@ -288,7 +288,7 @@ public static class Utils
         }
         else if (up_block_type == nameof(CrossAttnUpBlock2D))
         {
-            var transformer_layers_per_block_list = Enumerable.Repeat(transformer_layers_per_block, 1).ToArray();
+            var transformer_layers_per_block_list = Enumerable.Repeat(1, num_layers).ToArray();
 
             return new CrossAttnUpBlock2D(
                 num_layers: num_layers,
