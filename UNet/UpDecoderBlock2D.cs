@@ -6,19 +6,6 @@ namespace SD;
 
 public class UpDecoderBlock2D : Module<Tensor, Tensor?, Tensor>
 {
-        // in_channels: int,
-        // out_channels: int,
-        // resolution_idx: Optional[int] = None,
-        // dropout: float = 0.0,
-        // num_layers: int = 1,
-        // resnet_eps: float = 1e-6,
-        // resnet_time_scale_shift: str = "default",  # default, spatial
-        // resnet_act_fn: str = "swish",
-        // resnet_groups: int = 32,
-        // resnet_pre_norm: bool = True,
-        // output_scale_factor: float = 1.0,
-        // add_upsample: bool = True,
-        // temb_channels: Optional[int] = None,
     private readonly int in_channels;
     private readonly int out_channels;
     private readonly int? resolution_idx;

@@ -74,7 +74,7 @@ public class UNet2DConditionModelConfig
     public int TransformerLayersPerBlock {get; set;} = 1;
 
     [JsonPropertyName("reverse_transformer_layers_per_block")]
-    public int[][]? ReverseTransformerLayersPerBlock {get; set;} = null;
+    public int[]? ReverseTransformerLayersPerBlock {get; set;} = null;
 
     [JsonPropertyName("encoder_hid_dim")]
     public int? EncoderHidDim {get; set;} = null;
@@ -149,7 +149,7 @@ public class UNet2DConditionModelConfig
     public bool ClassEmbeddingsConcat {get; set;} = false;
 
     [JsonPropertyName("mid_block_only_cross_attention")]
-    public bool? MidBlockOnlyCrossAttention {get; set;} = null;
+    public bool MidBlockOnlyCrossAttention {get; set;} = false;
 
     [JsonPropertyName("cross_attention_norm")]
     public string? CrossAttentionNorm {get; set;} = null;

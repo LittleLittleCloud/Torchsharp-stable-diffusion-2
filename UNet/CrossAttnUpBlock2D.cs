@@ -1,14 +1,15 @@
 
 namespace SD;
-public class CrossAttnUpBlock2DInput
+public class UpBlock2DInput
 {
-    public CrossAttnUpBlock2DInput(
+    public UpBlock2DInput(
         Tensor hiddenStates,
         Tensor[] resHiddenStatesTuple, 
         Tensor? temb = null,
         Tensor? encoderHiddenStates = null,
         Dictionary<string, object>? crossAttentionKwargs = null,
         int? upsampleSize = null,
+        int[]? upsampleSizeList = null,
         Tensor? attentionMask = null,
         Tensor? encoderAttentionMask = null)
     {
@@ -19,6 +20,7 @@ public class CrossAttnUpBlock2DInput
         CrossAttentionKwargs = crossAttentionKwargs;
         UpsampleSize = upsampleSize;
         AttentionMask = attentionMask;
+        UpsampleSizeList = upsampleSizeList;
         EncoderAttentionMask = encoderAttentionMask;
     }
     public Tensor HiddenStates { get; }
@@ -29,15 +31,16 @@ public class CrossAttnUpBlock2DInput
 
     public int? UpsampleSize { get; }
 
+    public int[]? UpsampleSizeList { get; }
+
     public Tensor? AttentionMask { get; }
 
     public Tensor? EncoderAttentionMask { get; }
 
 }
 
-public class CrossAttnUpBlock2D : Module<CrossAttnUpBlock2DInput, Tensor>
+public class CrossAttnUpBlock2D : Module<UpBlock2DInput, Tensor>
 {
-
     private readonly bool has_cross_attention;
     private readonly int num_attention_heads;
     private readonly ModuleList<ResnetBlock2D> resnets;
@@ -138,8 +141,8 @@ public class CrossAttnUpBlock2D : Module<CrossAttnUpBlock2DInput, Tensor>
         this.resolution_idx = resolution_idx;
     }
 
-
-    public override Tensor forward(CrossAttnUpBlock2DInput input)
+    public ModuleList<ResnetBlock2D> Resnets => resnets;
+    public override Tensor forward(UpBlock2DInput input)
     {
         var hiddenStates = input.HiddenStates;
         var resHiddenStatesTuple = input.ResHiddenStatesTuple;

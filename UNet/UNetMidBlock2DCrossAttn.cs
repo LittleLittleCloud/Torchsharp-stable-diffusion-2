@@ -1,8 +1,8 @@
 namespace SD;
 
-public class UNetMidBlock2DCrossAttnInput
+public class UNetMidBlock2DInput
 {
-    public UNetMidBlock2DCrossAttnInput(
+    public UNetMidBlock2DInput(
         Tensor hiddenStates,
         Tensor? temb = null,
         Tensor? encoderHiddenStates = null,
@@ -31,7 +31,7 @@ public class UNetMidBlock2DCrossAttnInput
     public Tensor? EncoderAttentionMask { get; }
 }
 
-public class UNetMidBlock2DCrossAttn: Module<UNetMidBlock2DCrossAttnInput, Tensor>
+public class UNetMidBlock2DCrossAttn: Module<UNetMidBlock2DInput, Tensor>
 {
     private readonly bool has_cross_attention;
     private readonly int num_attention_heads;
@@ -51,7 +51,7 @@ public class UNetMidBlock2DCrossAttn: Module<UNetMidBlock2DCrossAttnInput, Tenso
         bool resnet_pre_norm = true,
         int num_attention_heads = 1,
         float output_scale_factor = 1.0f,
-        int cross_attention_dim = 1280,
+        int? cross_attention_dim = 1280,
         bool dual_cross_attention = false,
         bool use_linear_projection = false,
         bool upcast_attention = false,
@@ -123,7 +123,7 @@ public class UNetMidBlock2DCrossAttn: Module<UNetMidBlock2DCrossAttnInput, Tenso
         this.attentions = attentions;
     }
 
-    public override Tensor forward(UNetMidBlock2DCrossAttnInput input)
+    public override Tensor forward(UNetMidBlock2DInput input)
     {
         var hiddenStates = input.HiddenStates;
         var temb = input.Temb;

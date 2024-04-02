@@ -175,6 +175,150 @@ public static class Utils
             throw new ArgumentException("Invalid down block type", nameof(down_block_type));
         };
     }
+    
+    public static Module<UNetMidBlock2DInput, Tensor> GetMidBlock(
+        string mid_block_type,
+        int temb_channels,
+        int in_channels,
+        float resnet_eps,
+        string resnet_act_fn,
+        int resnet_groups,
+        float output_scale_factor = 1.0f,
+        int transformer_layers_per_block = 1,
+        int? num_attention_heads = null,
+        int? cross_attention_dim = null,
+        bool dual_cross_attention = false,
+        bool use_linear_projection = false,
+        bool mid_block_only_cross_attention = false,
+        bool upcast_attention = false,
+        string resnet_time_scale_shift = "default",
+        string attention_type = "default",
+        bool resnet_skip_time_act = false,
+        string? cross_attention_norm = null,
+        int? attention_head_dim = 1,
+        float dropout = 0.0f)
+    {
+        if (mid_block_type == nameof(UNetMidBlock2D))
+        {
+            return new UNetMidBlock2D(
+                in_channels: in_channels,
+                temb_channels: temb_channels,
+                dropout: dropout,
+                num_layers: 0,
+                resnet_eps: resnet_eps,
+                resnet_act_fn: resnet_act_fn,
+                output_scale_factor: output_scale_factor,
+                resnet_groups: resnet_groups,
+                resnet_time_scale_shift: resnet_time_scale_shift,
+                add_attention: false);
+        }
+        else if (mid_block_type == nameof(UNetMidBlock2DCrossAttn))
+        {
+            var transformer_layers_per_block_list = Enumerable.Repeat(transformer_layers_per_block, 1).ToArray();
+
+            return new UNetMidBlock2DCrossAttn(
+                transformer_layers_per_block: transformer_layers_per_block_list,
+                in_channels: in_channels,
+                temb_channels: temb_channels,
+                dropout: dropout,
+                resnet_eps: resnet_eps,
+                resnet_act_fn: resnet_act_fn,
+                output_scale_factor: output_scale_factor,
+                resnet_time_scale_shift: resnet_time_scale_shift,
+                cross_attention_dim: cross_attention_dim,
+                num_attention_heads: num_attention_heads ?? 1,
+                resnet_groups: resnet_groups,
+                dual_cross_attention: dual_cross_attention,
+                use_linear_projection: use_linear_projection,
+                upcast_attention: upcast_attention,
+                attention_type: attention_type);
+        }
+        else
+        {
+            throw new ArgumentException("Invalid mid block type", nameof(mid_block_type));
+        }
+    }
+    
+    public static Module<UpBlock2DInput, Tensor> GetUpBlock(
+        string up_block_type,
+        int num_layers,
+        int in_channels,
+        int out_channels,
+        int prev_output_channel,
+        int temb_channels,
+        bool add_upsample,
+        float resnet_eps,
+        string resnet_act_fn,
+        int? resolution_idx = null,
+        int transformer_layers_per_block = 1,
+        int num_attention_heads = 1,
+        int resnet_groups = 32,
+        int cross_attention_dim = 1280,
+        bool dual_cross_attention = false,
+        bool use_linear_projection = false,
+        bool only_cross_attention = false,
+        bool upcast_attention = false,
+        string resnet_time_scale_shift = "default",
+        string attention_type = "default",
+        bool resnet_skip_time_act = false,
+        float resnet_out_scale_factor = 1.0f,
+        string? cross_attention_norm = null,
+        int? attention_head_dim = null,
+        string? upsample_type = null,
+        float dropout = 0.0f)
+    {
+        attention_head_dim = attention_head_dim ?? num_attention_heads;
+        up_block_type = up_block_type.StartsWith("UNetRes") ? up_block_type.Substring(7) : up_block_type;
+
+        if (up_block_type == nameof(UpBlock2D))
+        {
+            return new UpBlock2D(
+                num_layers: num_layers,
+                in_channels: in_channels,
+                out_channels: out_channels,
+                prev_output_channel: prev_output_channel,
+                temb_channels: temb_channels,
+                resolution_idx: resolution_idx,
+                dropout: dropout,
+                add_upsample: add_upsample,
+                resnet_eps: resnet_eps,
+                resnet_act_fn: resnet_act_fn,
+                resnet_groups: resnet_groups,
+                resnet_time_scale_shift: resnet_time_scale_shift);
+        }
+        else if (up_block_type == nameof(CrossAttnUpBlock2D))
+        {
+            var transformer_layers_per_block_list = Enumerable.Repeat(transformer_layers_per_block, 1).ToArray();
+
+            return new CrossAttnUpBlock2D(
+                num_layers: num_layers,
+                transformer_layers_per_block: transformer_layers_per_block_list,
+                in_channels: in_channels,
+                out_channels: out_channels,
+                prev_output_channel: prev_output_channel,
+                temb_channels: temb_channels,
+                resolution_idx: resolution_idx,
+                dropout: dropout,
+                add_upsample: add_upsample,
+                resnet_eps: resnet_eps,
+                resnet_act_fn: resnet_act_fn,
+                resnet_groups: resnet_groups,
+                cross_attention_dim: cross_attention_dim,
+                num_attention_heads: num_attention_heads,
+                dual_cross_attention: dual_cross_attention,
+                use_linear_projection: use_linear_projection,
+                only_cross_attention: only_cross_attention,
+                upcast_attention: upcast_attention,
+                resnet_time_scale_shift: resnet_time_scale_shift,
+                attention_type: attention_type);
+                
+        }
+        else
+        {
+            throw new ArgumentException("Invalid up block type", nameof(up_block_type));
+        }
+    }
+
     public static Tensor PrecomputeThetaPosFrequencies(int headDim, int seqLen, string device, float theta = 10000.0f)
     {
         // As written in the paragraph 3.2.2 of the paper
