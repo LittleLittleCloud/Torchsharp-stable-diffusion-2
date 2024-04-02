@@ -36,7 +36,7 @@ public class CrossAttnDownBlock2D : Module<DownBlock2DInput, DownBlock2DOutput>
         ModuleList<Module> attentions = new ModuleList<Module>();
 
         this.has_cross_attention = true;
-        this.num_attention_heads = num_attention_heads;
+        this.num_attention_heads = num_attention_heads ?? 1;
         transformer_layers_per_block = transformer_layers_per_block ?? Enumerable.Repeat(num_layers, 1).ToArray();
 
         for(int i = 0; i != num_layers; ++i)
@@ -48,7 +48,7 @@ public class CrossAttnDownBlock2D : Module<DownBlock2DInput, DownBlock2DOutput>
                     out_channels: out_channels,
                     temb_channels: temb_channels,
                     eps: (float)resnet_eps,
-                    groups: resnet_groups,
+                    groups: resnet_groups ?? 32,
                     dropout: (float)dropout,
                     time_embedding_norm: resnet_time_scale_shift,
                     non_linearity: resnet_act_fn,
@@ -59,12 +59,12 @@ public class CrossAttnDownBlock2D : Module<DownBlock2DInput, DownBlock2DOutput>
             {
                 attentions.Add(
                     new Transformer2DModel(
-                        num_attention_heads: num_attention_heads,
+                        num_attention_heads: num_attention_heads ?? 16,
                         out_channels: out_channels / num_attention_heads,
                         in_channels: out_channels,
                         num_layers: transformer_layers_per_block[i],
                         cross_attention_dim: cross_attention_dim,
-                        norm_num_groups: resnet_groups,
+                        norm_num_groups: resnet_groups ?? 32,
                         use_linear_projection: use_linear_projection,
                         only_cross_attention: only_cross_attention,
                         upcast_attention: upcast_attention,
@@ -74,12 +74,12 @@ public class CrossAttnDownBlock2D : Module<DownBlock2DInput, DownBlock2DOutput>
             {
                 attentions.Add(
                     new DualTransformer2DModel(
-                        num_attention_heads: num_attention_heads,
-                        attention_head_dim: out_channels / num_attention_heads,
+                        num_attention_heads: num_attention_heads ?? 16,
+                        attention_head_dim: out_channels / num_attention_heads ?? 88,
                         in_channels: out_channels,
                         num_layers: 1,
                         cross_attention_dim: cross_attention_dim,
-                        norm_num_groups: resnet_groups));
+                        norm_num_groups: resnet_groups ?? 32));
             }
         }
 

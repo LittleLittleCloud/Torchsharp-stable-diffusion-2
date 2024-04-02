@@ -50,7 +50,7 @@ public class Downsample2D : Module<Tensor, Tensor>
             Module<Tensor, Tensor> conv;
             if (use_conv)
             {
-                conv = nn.Conv2d(inputChannel: this.channels, outputChannel: this.out_channels, kernelSize: kernel_size, stride: 2, padding: padding, bias: bias);
+                conv = nn.Conv2d(inputChannel: this.channels, outputChannel: this.out_channels, kernelSize: kernel_size, stride: 2, padding: padding ?? 1, bias: bias);
             }
             else
             {
