@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace SD;
 
 public class DDIMSchedulerOutput
@@ -27,6 +29,12 @@ public class DDIMScheduler
         else if (config.BetaSchedule == "linear")
         {
             this.betas = torch.linspace(config.BetaStart, config.BetaEnd, config.NumTrainTimesteps, dtype: ScalarType.Float32);
+        }
+        else if (config.BetaSchedule == "scaled_linear")
+        {
+            var start = Math.Sqrt(config.BetaStart);
+            var end = Math.Sqrt(config.BetaEnd);
+            this.betas = torch.linspace(start, end, config.NumTrainTimesteps, dtype: ScalarType.Float32).pow(2);
         }
         else
         {
@@ -65,6 +73,11 @@ public class DDIMScheduler
     private int? num_inference_steps;
     public DDIMSchedulerConfig Config { get; }
     public Tensor TimeSteps => this.timesteps;
+    public Tensor Alphas => this.alphas;
+    public Tensor Betas => this.betas;
+    public Tensor AlphasCumprod => this.alphas_cumprod;
+    public Tensor InitNoiseSigma => this.init_noise_sigma;
+    public int? NumInferenceSteps => this.num_inference_steps;
     
     /// <summary>
     /// Ensures interchangeability with schedulers that need to scale the denoising model input depending on the current timestep.
@@ -101,7 +114,7 @@ public class DDIMScheduler
         else if (this.Config.TimestepSpacing == "leading")
         {
             var step_ratio = this.Config.NumTrainTimesteps / num_inference_steps;
-            timesteps = torch.arange(0, this.Config.NumTrainTimesteps, step_ratio).round().to(ScalarType.Int64).flip();
+            timesteps = torch.arange(0, this.Config.NumTrainTimesteps, step_ratio, dtype: ScalarType.Float32).round().to(ScalarType.Int64).flip();
             timesteps += this.Config.StepsOffset;
         }
         else if (this.Config.TimestepSpacing == "trailing")
@@ -321,5 +334,12 @@ public class DDIMScheduler
         sample = sample.to(dtype);
 
         return sample;
+    }
+
+    public static DDIMScheduler FromPretrained(string schedulerConfigFolder, string schedulerConfigName = "scheduler_config.json")
+    {
+        var configPath = Path.Join(schedulerConfigFolder, schedulerConfigName);
+        var config = JsonSerializer.Deserialize<DDIMSchedulerConfig>(File.ReadAllText(configPath)) ?? throw new ArgumentException("Invalid config file");
+        return new DDIMScheduler(config);
     }
 }
