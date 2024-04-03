@@ -60,7 +60,7 @@ public class Transformer2DModel : Module<Tensor, Tensor?, Tensor?,Tensor?, Tenso
         string attention_type = "default",
         int? caption_channels = null,
         double? interpolation_scale = null)
-        : base("Transformer2DModel")
+        : base(nameof(Transformer2DModel))
     {
         this.num_attention_heads = num_attention_heads;
         this.attention_head_dim = attention_head_dim;

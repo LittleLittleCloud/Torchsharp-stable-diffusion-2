@@ -90,6 +90,8 @@ public class BPETokenizer
 
     public int VocabSize => this.tokenizer.Model.GetVocabSize();
 
+    public int ModelMaxLength { get; } = 77;
+
     public int PadId { get; }
 
     public int BosId { get; }
@@ -112,7 +114,12 @@ public class BPETokenizer
         return this.tokenizer.Model.TokenToId(token) ?? throw new Exception("Failed to get token id");
     }
 
-    public int[] Encode(string input, bool bos = false, bool eos = false)
+    public int[] Encode(
+        string input,
+        bool bos = false,
+        bool eos = false,
+        string? padding = null,
+        int? maxLength = null)
     {
         if (this.addPrecedingSpace)
         {
@@ -127,6 +134,19 @@ public class BPETokenizer
         {
             tokens = tokens.Concat(new int[] { this.EosId }).ToArray();
         }
+
+        if (padding == "max_length" && maxLength is int maxLen)
+        {
+            if (tokens.Length > maxLen)
+            {
+                tokens = tokens.Take(maxLen).ToArray();
+            }
+            else if (tokens.Length < maxLen)
+            {
+                tokens = tokens.Concat(Enumerable.Repeat(this.PadId, maxLen - tokens.Length)).ToArray();
+            }
+        }
+
         return tokens;
     }
 }

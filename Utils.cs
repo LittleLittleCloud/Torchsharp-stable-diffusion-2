@@ -55,6 +55,36 @@ public static class Utils
     }
 
     /// <summary>
+    /// Rescales betas to have zero terminal SNR Based on https://arxiv.org/pdf/2305.08891.pdf (Algorithm 1)
+    /// </summary>
+    /// <param name="betas">the betas that the scheduler is being initialized with.</param>
+    /// <returns></returns>
+    public static Tensor RescaleZeroTerminalSnr(Tensor betas)
+    {
+        var alphas = 1.0f - betas;
+        var alphas_cumprod = torch.cumprod(alphas, 0);
+        var alphas_bar_sqrt = alphas_cumprod.sqrt();
+
+        // store old values
+        var alphas_bar_sqrt_0 = alphas_bar_sqrt[0].clone();
+        var alphas_bar_sqrt_T = alphas_bar_sqrt[^1].clone();
+
+        // shift so the last timestep is zero
+        alphas_bar_sqrt = alphas_bar_sqrt - alphas_bar_sqrt_T;
+
+        // scale so the first timestep is back to the old value
+        alphas_bar_sqrt = alphas_bar_sqrt * alphas_bar_sqrt_0 / (alphas_bar_sqrt_0 - alphas_bar_sqrt_T);
+
+        // convert alphas_bar_sqrt to betas
+        var alphas_bar = alphas_bar_sqrt.pow(2);
+        alphas = alphas_bar[1..] / alphas_bar[..^1];
+        alphas = torch.cat([alphas_bar[0..1], alphas]);
+
+        betas = 1.0f - alphas;
+
+        return betas;
+    }
+    /// <summary>
     /// This matches the implementation in Denoising Diffusion Probabilistic Models: Create sinusoidal timestep embeddings.
     /// </summary>
     /// <param name="timesteps">a 1-D Tensor of N indices, one per batch element. These may be fractional</param>

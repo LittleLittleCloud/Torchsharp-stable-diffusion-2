@@ -10,7 +10,7 @@ public class Downsample2D : Module<Tensor, Tensor>
     private readonly int out_channels;
     private readonly bool use_conv;
     private readonly int? padding;
-    private readonly string name;
+    private readonly string conv_name;
 
     private readonly Module<Tensor, Tensor>? conv;
     private readonly Module<Tensor, Tensor>? Conv2d_0;
@@ -32,7 +32,7 @@ public class Downsample2D : Module<Tensor, Tensor>
             this.out_channels = out_channels ?? channels;
             this.use_conv = use_conv;
             this.padding = padding;
-            this.name = name;
+            this.conv_name = name;
             
             if (norm_type is "ln_norm")
             {
@@ -70,7 +70,6 @@ public class Downsample2D : Module<Tensor, Tensor>
                 this.conv = conv;
             }
 
-            RegisterComponents();
         }
 
     public override Tensor forward(Tensor hidden_states)

@@ -32,41 +32,30 @@ public class AutoencoderKL : Module<Tensor, bool, Generator?, Tensor>, IModelCon
     private readonly Conv2d quant_conv;
     private readonly Conv2d post_quant_conv;
 
-    public AutoencoderKL(
-        int in_channels = 3,
-        int out_channels = 3,
-        string[]? down_block_types = null,
-        string[]? up_block_types = null,
-        int[]? block_out_channels = null,
-        int layers_per_block = 1,
-        string act_fn = "silu",
-        int latent_channels = 4,
-        int norm_num_groups = 32,
-        int sample_size = 32,
-        float scaling_factor = 0.18215f,
-        float[]? latents_mean = null,
-        float[]? latents_std = null,
-        bool force_upcast = true)
+    public AutoencoderKL(Config config)
         : base(nameof(AutoencoderKL))
     {
-        down_block_types = down_block_types ?? new string[] { "DownEncoderBlock2D" };
-        up_block_types = up_block_types ?? new string[] { "UpDecoderBlock2D" };
-        block_out_channels = block_out_channels ?? new int[] { 64 };
+        this.in_channels = config!.InChannels;
+        this.out_channels = config!.OutChannels;
+        this.down_block_types = config!.DownBlockTypes;
+        this.up_block_types = config!.UpBlockTypes;
+        this.block_out_channels = config!.BlockOutChannels;
+        this.layers_per_block = config!.LayersPerBlock;
+        this.act_fn = config!.ActivationFunction;
+        this.latent_channels = config!.LatentChannels;
+        this.norm_num_groups = config!.NormNumGroups;
+        this.sample_size = config!.SampleSize;
+        this.scaling_factor = config!.ScalingFactor;
+        this.latents_mean = config!.LatentsMean;
+        this.latents_std = config!.LatentsStd;
+        this.force_upcast = config!.ForceUpcast;
 
-        this.in_channels = in_channels;
-        this.out_channels = out_channels;
-        this.down_block_types = down_block_types;
-        this.up_block_types = up_block_types;
-        this.block_out_channels = block_out_channels;
-        this.layers_per_block = layers_per_block;
-        this.act_fn = act_fn;
-        this.latent_channels = latent_channels;
-        this.norm_num_groups = norm_num_groups;
-        this.sample_size = sample_size;
-        this.scaling_factor = scaling_factor;
-        this.latents_mean = latents_mean;
-        this.latents_std = latents_std;
-        this.force_upcast = force_upcast;
+        
+
+        this.quant_conv = nn.Conv2d(2 * latent_channels, 2 * latent_channels, kernelSize: 1, padding: Padding.Valid);
+        this.post_quant_conv = nn.Conv2d(latent_channels, latent_channels, kernelSize: 1, padding: Padding.Same);
+
+        this.Config = config;
 
         this.encoder = new Encoder(
             inChannels: in_channels,
@@ -88,19 +77,14 @@ public class AutoencoderKL : Module<Tensor, bool, Generator?, Tensor>, IModelCon
             act_fn: act_fn,
             mid_block_add_attention: true);
 
-        this.latents_mean = latents_mean;
-        this.latents_std = latents_std;
-        this.force_upcast = force_upcast;
-
-        this.quant_conv = nn.Conv2d(2 * latent_channels, 2 * latent_channels, kernelSize: 1, padding: Padding.Valid);
-        this.post_quant_conv = nn.Conv2d(latent_channels, latent_channels, kernelSize: 1, padding: Padding.Same);
-
         RegisterComponents();
     }
 
     public Decoder Decoder => this.decoder;
 
     public Encoder Encoder => this.encoder;
+
+    public Config Config {get;}
 
     public DiagonalGaussianDistribution encode(Tensor x)
     {
@@ -154,19 +138,9 @@ public class AutoencoderKL : Module<Tensor, bool, Generator?, Tensor>, IModelCon
     {
         var configPath = Path.Combine(pretrainedModelNameOrPath, configName);
         var json = File.ReadAllText(configPath);
-        var config = JsonSerializer.Deserialize<Config>(json);
+        var config = JsonSerializer.Deserialize<Config>(json) ?? throw new ArgumentNullException("config");
 
-        var autoEncoderKL = new AutoencoderKL(
-            in_channels: config!.InChannels,
-            out_channels: config!.OutChannels,
-            down_block_types: config!.DownBlockTypes,
-            up_block_types: config!.UpBlockTypes,
-            block_out_channels: config!.BlockOutChannels,
-            layers_per_block: config!.LayersPerBlock,
-            act_fn: config!.ActivationFunction,
-            latent_channels: config!.LatentChannels,
-            norm_num_groups: config!.NormNumGroups,
-            sample_size: config!.SampleSize);
+        var autoEncoderKL = new AutoencoderKL(config);
 
         modelWeightName = (useSafeTensor, torchDtype) switch
         {

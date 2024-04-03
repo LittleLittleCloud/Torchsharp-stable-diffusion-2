@@ -268,6 +268,8 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
     private Module<Tensor, Tensor>? conv_act;
     private Conv2d conv_out;
 
+    public UNet2DConditionModelConfig Config => config;
+
     private (int, int) _set_time_proj(
         string time_embedding_type,
         int[] block_out_channels,

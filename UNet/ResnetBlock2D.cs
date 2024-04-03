@@ -109,6 +109,7 @@ public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
 
     public override Tensor forward(Tensor input_tensor, Tensor? temb)
     {
+        using var _  = NewDisposeScope();
         var hidden_states = input_tensor;
         hidden_states = this.norm1.forward(hidden_states);
         hidden_states = this.nonlinearity.forward(hidden_states);
@@ -158,13 +159,14 @@ public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
         hidden_states = this.nonlinearity.forward(hidden_states);
         hidden_states = this.dropout.forward(hidden_states);
         hidden_states = this.conv2.forward(hidden_states);
-        hidden_states.Peek("hidden_states");
         if (this.conv_shortcut is not null)
         {
             input_tensor = this.conv_shortcut.forward(input_tensor);
         }
 
 
-        return (input_tensor + hidden_states) / this.output_scale_factor;
+        var output = (input_tensor + hidden_states) / this.output_scale_factor;
+
+        return output.MoveToOuterDisposeScope();
     }
 }

@@ -48,6 +48,7 @@ public class Encoder : Module<Tensor, Tensor>
         bool midBlockAddAttention = true)
         : base(nameof(Encoder))
     {
+
         _inChannels = inChannels ?? 3;
         _outChannels = outChannels ?? 3;
         _blockOutChannels = blockOutChannels ?? [64];
@@ -59,6 +60,17 @@ public class Encoder : Module<Tensor, Tensor>
         this.conv_in = torch.nn.Conv2d(this._inChannels, this._blockOutChannels[0], kernelSize: 3, stride: 1, padding: 1);
         this.down_blocks = new ModuleList<Module<Tensor, Tensor>>();
 
+        // mid
+        this.mid_block = new UNetMidBlock2D(
+            in_channels: _blockOutChannels[^1],
+            resnet_eps: 1e-6f,
+            resnet_act_fn: activationFunction,
+            output_scale_factor: 1,
+            resnet_time_scale_shift: "default",
+            attention_head_dim: _blockOutChannels[^1],
+            resnet_groups: normNumGroups,
+            add_attention: midBlockAddAttention);
+            
         var output_channel = _blockOutChannels[0];
         for (int i = 0; i < _blockOutChannels.Length; i++)
         {
@@ -76,25 +88,12 @@ public class Encoder : Module<Tensor, Tensor>
 
             this.down_blocks.Add(down_block);
         }
-
-        // mid
-        this.mid_block = new UNetMidBlock2D(
-            in_channels: _blockOutChannels[^1],
-            resnet_eps: 1e-6f,
-            resnet_act_fn: activationFunction,
-            output_scale_factor: 1,
-            resnet_time_scale_shift: "default",
-            attention_head_dim: _blockOutChannels[^1],
-            resnet_groups: normNumGroups,
-            add_attention: midBlockAddAttention);
-
         // out
         this.conv_norm_out = nn.GroupNorm(num_groups: normNumGroups, num_channels: _blockOutChannels[^1], eps: 1e-6f);
         this.conv_act = nn.SiLU();
         var conv_out_channels = doubleZ ? _outChannels * 2 : _outChannels;
         this.conv_out = nn.Conv2d(_blockOutChannels[^1], conv_out_channels, kernelSize: 3, padding: Padding.Same);
 
-        RegisterComponents();
     }
 
     public override Tensor forward(Tensor sample)

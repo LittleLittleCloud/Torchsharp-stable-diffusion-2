@@ -45,6 +45,18 @@ namespace SD
         [JsonPropertyName("up_block_types")]
         public string[] UpBlockTypes { get; set; } = { "UpDecoderBlock2D", "UpDecoderBlock2D", "UpDecoderBlock2D", "UpDecoderBlock2D" };
 
+        [JsonPropertyName("scaling_factor")]
+        public float ScalingFactor { get; set; } = 0.18215f;
+
+        [JsonPropertyName("latents_mean")]
+        public float[]? LatentsMean { get; set; }
+
+        [JsonPropertyName("latents_std")]
+        public float[]? LatentsStd { get; set; }
+
+        [JsonPropertyName("force_upcast")]
+        public bool ForceUpcast { get; set; } = true;
+
         public override string ToString()
         {
             return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
