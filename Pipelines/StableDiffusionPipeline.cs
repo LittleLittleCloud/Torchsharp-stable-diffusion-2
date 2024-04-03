@@ -289,4 +289,33 @@ public class StableDiffusionPipeline
 
         return prompt_embeds;
     }
+
+    public static StableDiffusionPipeline FromPretrained(
+        string modelWeightFolder,
+        string vaeFolder = "vae",
+        string textModelFolder = "text_encoder",
+        string schedulerFolder = "scheduler",
+        string unetFolder = "unet",
+        string tokenizerFolder = "tokenizer")
+    {
+        var unetModelPath = Path.Join(modelWeightFolder, unetFolder);
+        var tokenzierModelPath = Path.Join(modelWeightFolder, tokenizerFolder);
+        var textModelPath = Path.Join(modelWeightFolder, textModelFolder);
+        var schedulerModelPath = Path.Join(modelWeightFolder, schedulerFolder);
+        var vaeModelPath = Path.Join(modelWeightFolder, vaeFolder);
+        var tokenizer = BPETokenizer.FromPretrained(tokenzierModelPath);
+        var clipTextModel = CLIPTextModel.FromPretrained(textModelPath);
+        var unet = UNet2DConditionModel.FromPretrained(unetModelPath);
+        var vae = AutoencoderKL.FromPretrained(vaeModelPath);
+        var scheduler = DDIMScheduler.FromPretrained(schedulerModelPath);
+
+        var pipeline = new StableDiffusionPipeline(
+            vae: vae,
+            text_encoder: clipTextModel,
+            unet: unet,
+            tokenizer: tokenizer,
+            scheduler: scheduler);
+
+        return pipeline;
+    }
 }
