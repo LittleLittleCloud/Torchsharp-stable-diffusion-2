@@ -10,7 +10,7 @@ public class Upsample2D : Module<Tensor, int?, Tensor>
     private readonly bool use_conv;
     private readonly int out_channels;
     private readonly bool use_conv_transpose;
-    private readonly string name;
+    private readonly string conv_name;
     private readonly bool interpolate;
 
     private readonly Module<Tensor, Tensor>? norm;
@@ -36,7 +36,7 @@ public class Upsample2D : Module<Tensor, int?, Tensor>
             this.out_channels = out_channels ?? channels;
             this.use_conv = use_conv;
             this.use_conv_transpose = use_conv_transpose;
-            this.name = name;
+            this.conv_name = name;
             this.interpolate = interpolate;
             
             if (norm_type is "ln_norm")
@@ -66,16 +66,15 @@ public class Upsample2D : Module<Tensor, int?, Tensor>
                 conv = null;
             }
 
-            if (this.name is "conv")
+            if (this.conv_name is "conv")
             {
-                this.conv = conv ?? throw new ArgumentException("Invalid conv type: " + this.name);
+                this.conv = conv ?? throw new ArgumentException("Invalid conv type: " + this.conv_name);
             }
             else
             {
-                this.Conv2d_0 = conv ?? throw new ArgumentException("Invalid conv type: " + this.name);
+                this.Conv2d_0 = conv ?? throw new ArgumentException("Invalid conv type: " + this.conv_name);
             }
 
-            RegisterComponents();
         }
 
     public override Tensor forward(Tensor hidden_states, int? output_size)
@@ -114,7 +113,7 @@ public class Upsample2D : Module<Tensor, int?, Tensor>
 
         if (this.use_conv)
         {
-            if (this.name is "conv")
+            if (this.conv_name is "conv")
             {
                 return this.conv!.forward(hidden_states);
             }

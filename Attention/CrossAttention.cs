@@ -228,7 +228,10 @@ public class Attention : Module<Tensor, Tensor?, Tensor?, Tensor?, Tensor>
         Tensor? attention_mask = null,
         Tensor? temb = null)
     {
-        return this.processor.Process(this, hidden_states, encoder_hidden_states, attention_mask, temb);
+        using var _ = NewDisposeScope();
+        var output = this.processor.Process(this, hidden_states, encoder_hidden_states, attention_mask, temb);
+
+        return output.MoveToOuterDisposeScope();
     }
 
     /// <summary>

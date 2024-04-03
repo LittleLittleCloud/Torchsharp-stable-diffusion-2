@@ -52,9 +52,9 @@ public class CLIPTextModel : Module<Tensor, Tensor?, Tensor?, bool?, bool?, Base
         modelWeightName = (useSafeTensor, torchDtype) switch
         {
             (true, ScalarType.Float32) => $"{modelWeightName}.safetensors",
-            (true, ScalarType.BFloat16) => $"{modelWeightName}.fp16.safetensors",
+            (true, ScalarType.Float16) => $"{modelWeightName}.fp16.safetensors",
             (false, ScalarType.Float32) => $"{modelWeightName}.bin",
-            (false, ScalarType.BFloat16) => $"{modelWeightName}.fp16.bin",
+            (false, ScalarType.Float16) => $"{modelWeightName}.fp16.bin",
             _ => throw new ArgumentException("Invalid arguments for useSafeTensor and torchDtype")
         };
 

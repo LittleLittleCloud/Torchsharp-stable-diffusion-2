@@ -21,5 +21,9 @@ public class TokenizerTest
         var input = "a photo of a cat";
         var output = tokenizer.Encode(input, true, true);
         output.Should().BeEquivalentTo([49406,   320,  1125,   539,   320,  2368, 49407]);
+
+        // encode with max_length
+        output = tokenizer.Encode(input, true, true, padding: "max_length", maxLength: 10);
+        output.Should().BeEquivalentTo([49406,   320,  1125,   539,   320,  2368, 49407, 0, 0, 0]);
     }
 }

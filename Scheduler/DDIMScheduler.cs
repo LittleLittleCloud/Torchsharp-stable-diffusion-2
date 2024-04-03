@@ -68,7 +68,7 @@ public class DDIMScheduler
     private Tensor alphas;
     private Tensor alphas_cumprod;
     private Tensor final_alpha_cumprod;
-    private Tensor init_noise_sigma;
+    private float init_noise_sigma;
     private Tensor timesteps;
     private int? num_inference_steps;
     public DDIMSchedulerConfig Config { get; }
@@ -76,7 +76,7 @@ public class DDIMScheduler
     public Tensor Alphas => this.alphas;
     public Tensor Betas => this.betas;
     public Tensor AlphasCumprod => this.alphas_cumprod;
-    public Tensor InitNoiseSigma => this.init_noise_sigma;
+    public float InitNoiseSigma => this.init_noise_sigma;
     public int? NumInferenceSteps => this.num_inference_steps;
     
     /// <summary>
@@ -94,10 +94,28 @@ public class DDIMScheduler
     /// </summary>
     /// <param name="num_inference_steps">The number of diffusion steps used when generating samples with a pre-trained model.</param>
     public void SetTimesteps(
-        int num_inference_steps,
-        DeviceType? device = null
+        int? num_inference_steps = null,
+        int[]? timesteps = null,
+        DeviceType? device = DeviceType.CPU
     )
     {
+        if (num_inference_steps is not null && timesteps is not null)
+        {
+            throw new ArgumentException("Only one of `num_inference_steps` or `timesteps` should be passed.");
+        }
+
+        if (num_inference_steps is null && timesteps is null)
+        {
+            throw new ArgumentException("Either `num_inference_steps` or `timesteps` should be passed.");
+        }
+
+        if (timesteps is not null)
+        {
+            this.timesteps = torch.tensor(timesteps, dtype: ScalarType.Int64).to(device ?? DeviceType.CPU);
+            this.num_inference_steps = this.timesteps.IntShape()[0];
+            return;
+        }
+
         if (num_inference_steps > this.Config.NumTrainTimesteps)
         {
             throw new ArgumentException("num_inference_steps must be less than or equal to num_train_timesteps");
@@ -106,22 +124,21 @@ public class DDIMScheduler
         this.num_inference_steps = num_inference_steps;
 
         // "linspace", "leading", "trailing" corresponds to annotation of Table 2. of https://arxiv.org/abs/2305.08891
-        Tensor timesteps;
         if (this.Config.TimestepSpacing == "linspace")
         {
-            timesteps = torch.linspace(0, this.Config.NumTrainTimesteps - 1, num_inference_steps).round().flip().to(ScalarType.Int64);
+            this.timesteps = torch.linspace(0, this.Config.NumTrainTimesteps - 1, num_inference_steps!.Value).round().flip(0).to(ScalarType.Int64);
         }
         else if (this.Config.TimestepSpacing == "leading")
         {
             var step_ratio = this.Config.NumTrainTimesteps / num_inference_steps;
-            timesteps = torch.arange(0, this.Config.NumTrainTimesteps, step_ratio, dtype: ScalarType.Float32).round().to(ScalarType.Int64).flip();
-            timesteps += this.Config.StepsOffset;
+            this.timesteps = torch.arange(0, this.Config.NumTrainTimesteps, step_ratio, dtype: ScalarType.Float32).round().to(ScalarType.Int64).flip(0);
+            this.timesteps += this.Config.StepsOffset;
         }
         else if (this.Config.TimestepSpacing == "trailing")
         {
             var step_ratio = this.Config.NumTrainTimesteps * 1.0f / num_inference_steps;
-            timesteps = torch.arange(0, this.Config.NumTrainTimesteps, step_ratio).round().to(ScalarType.Int64).flip();
-            timesteps -= 1;
+            this.timesteps = torch.arange(0, this.Config.NumTrainTimesteps, step_ratio).round().to(ScalarType.Int64).flip(0);
+            this.timesteps -= 1;
         }
         else
         {
@@ -130,10 +147,8 @@ public class DDIMScheduler
 
         if (device is not null)
         {
-            timesteps = timesteps.to(device.Value);
+            this.timesteps.to(device.Value);
         }
-
-        this.timesteps = timesteps;
     }
 
     public Tensor AddNoise(Tensor original_samples, Tensor noise, Tensor timesteps)

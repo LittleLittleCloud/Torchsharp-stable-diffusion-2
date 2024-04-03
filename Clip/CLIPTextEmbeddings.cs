@@ -33,10 +33,11 @@ public class CLIPTextEmbeddings : Module<Tensor?, Tensor?, Tensor?, Tensor>
             throw new ArgumentException("You have to specify either input_ids or inputs_embeds");
         }
         var seq_length = input_ids is not null ? input_ids.shape[^1] : inputs_embeds!.shape[^2];
-
+        var device = input_ids?.device ?? position_ids?.device ?? inputs_embeds?.device ?? throw new ArgumentException("You have to specify either input_ids or inputs_embeds");
         if (position_ids is null)
         {
             position_ids = this.get_buffer("position_ids")[.., ..(int)seq_length];
+            position_ids = position_ids.to(device);
         }
 
         if (inputs_embeds is null)

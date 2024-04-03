@@ -2,3 +2,5 @@ obj/
 bin/
 *.received.txt
 .mono/
+
+img/
