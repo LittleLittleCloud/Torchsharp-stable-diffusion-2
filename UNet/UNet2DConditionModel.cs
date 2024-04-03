@@ -370,9 +370,7 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
 
         // 1. time
         var t_emb = this.get_time_embed(sample, input.Timestep);
-        t_emb.Peek("unet_t_emb");
         var emb = this.time_embedding.forward(t_emb, input.TimestepCond);
-        emb.Peek("unet_emb");
         // class emb is null
 
         // aug_emb is null

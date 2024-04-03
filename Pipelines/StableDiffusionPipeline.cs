@@ -155,8 +155,6 @@ public class StableDiffusionPipeline
             var latent_model_input = !do_classifier_free_guidance ? latents : torch.cat([latents, latents], 0);
             latent_model_input = this.scheduler.ScaleModelInput(latent_model_input, step);
 
-            latent_model_input.Peek("latent_model_input");
-            prompt_embeds.Peek("prompt_embeds");
             // predict noise residual
             Tensor noise_pred;
             using (var __ = NewDisposeScope())
@@ -200,7 +198,6 @@ public class StableDiffusionPipeline
         Tensor? latents = null)
     {
         long[] shape = [batch_size, num_channels_latents, height / this.vae_scale_factor, width / this.vae_scale_factor];
-        Console.WriteLine($"Height: {height}, Width: {width}, vae_scale_factor: {this.vae_scale_factor}");
         if (latents is null)
         {
             latents = torch.randn(shape, dtype: dtype, generator: generator).to(device);
@@ -210,11 +207,7 @@ public class StableDiffusionPipeline
             latents = latents.to(dtype).to(device);
         }
 
-        latents.Peek("latents");
         latents = latents * this.scheduler.InitNoiseSigma;
-        latents.Peek("latents");
-        Console.WriteLine($"init_noise_sigma: {this.scheduler.InitNoiseSigma}");
-
         return latents;
     }
 

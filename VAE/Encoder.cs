@@ -99,14 +99,11 @@ public class Encoder : Module<Tensor, Tensor>
     public override Tensor forward(Tensor sample)
     {
         sample = this.conv_in.forward(sample);
-        sample.Peek("sample");
-        Console.WriteLine($"length of down_block: {this.down_blocks.Count}");
         // down
         foreach (var down_block in this.down_blocks)
         {
             sample = down_block.forward(sample);
         }
-        sample.Peek("sample");
         // mid
         var input = new UNetMidBlock2DInput(sample);
         sample = this.mid_block.forward(input);

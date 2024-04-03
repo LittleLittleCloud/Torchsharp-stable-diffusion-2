@@ -124,7 +124,6 @@ public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
         hidden_states = this.conv1.forward(hidden_states);
         if (this.time_emb_proj is not null)
         {
-            temb.Peek("temb");
             if (!this.skip_time_act){
                 temb = this.nonlinearity.forward(temb!);
             }

@@ -133,7 +133,6 @@ public class UNetMidBlock2D : Module<UNetMidBlock2DInput, Tensor>
         var hidden_states = input.HiddenStates;
         var temb = input.Temb;
         hidden_states = resnets[0].forward(hidden_states, temb);
-        hidden_states.Peek("unet_mid_h");
         foreach (var (attn, resnet) in Enumerable.Zip(attentions, resnets.Skip(1)))
         {
             if (attn is not null)
