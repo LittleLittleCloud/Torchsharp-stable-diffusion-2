@@ -57,6 +57,12 @@ namespace SD
         [JsonPropertyName("force_upcast")]
         public bool ForceUpcast { get; set; } = true;
 
+        [JsonPropertyName("decoder_mid_block_from_deprecated_attn_block")]
+        public bool DecoderMidBlockFromDeprecatedAttnBlock { get; set; } = true;
+
+        [JsonPropertyName("encoder_mid_block_add_attention")]
+        public bool EncoderMidBlockAddAttention { get; set; } = true;
+
         public override string ToString()
         {
             return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });

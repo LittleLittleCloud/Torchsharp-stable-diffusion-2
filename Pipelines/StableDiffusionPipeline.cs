@@ -13,6 +13,7 @@ public class StableDiffusionPipelineOutput
 }
 public class StableDiffusionPipeline
 {
+    private readonly ScalarType defaultDtype;
     private readonly int vae_scale_factor;
     private DeviceType device = DeviceType.CPU;
 
@@ -21,8 +22,10 @@ public class StableDiffusionPipeline
         CLIPTextModel text_encoder,
         BPETokenizer tokenizer,
         UNet2DConditionModel unet,
-        DDIMScheduler scheduler) // todo: safety checker, feature extractor and image encoder
+        DDIMScheduler scheduler,
+        ScalarType dtype = ScalarType.Float32) // todo: safety checker, feature extractor and image encoder
     {
+        this.defaultDtype = dtype;
         this.vae = vae;
         this.text_encoder = text_encoder;
         this.tokenizer = tokenizer;
@@ -143,6 +146,7 @@ public class StableDiffusionPipeline
             width!.Value,
             height!.Value,
             device,
+            dtype: this.defaultDtype,
             generator: generator,
             latents: latents);
         
@@ -154,7 +158,6 @@ public class StableDiffusionPipeline
             // expand the latents if we are doing classifier free guidance
             var latent_model_input = !do_classifier_free_guidance ? latents : torch.cat([latents, latents], 0);
             latent_model_input = this.scheduler.ScaleModelInput(latent_model_input, step);
-
             // predict noise residual
             Tensor noise_pred;
             using (var __ = NewDisposeScope())
@@ -165,6 +168,9 @@ public class StableDiffusionPipeline
                     encoderHiddenStates: prompt_embeds);
                 noise_pred = this.unet.forward(unetInput).MoveToOuterDisposeScope();
             }
+            latent_model_input.Peek("latent_model_input");
+            prompt_embeds.Peek("prompt_embeds");
+            noise_pred.Peek("noise_pred");
 
             if (do_classifier_free_guidance)
             {
@@ -289,7 +295,8 @@ public class StableDiffusionPipeline
         string textModelFolder = "text_encoder",
         string schedulerFolder = "scheduler",
         string unetFolder = "unet",
-        string tokenizerFolder = "tokenizer")
+        string tokenizerFolder = "tokenizer",
+        ScalarType torchDtype = ScalarType.Float32)
     {
         var unetModelPath = Path.Join(modelWeightFolder, unetFolder);
         var tokenzierModelPath = Path.Join(modelWeightFolder, tokenizerFolder);
@@ -297,9 +304,9 @@ public class StableDiffusionPipeline
         var schedulerModelPath = Path.Join(modelWeightFolder, schedulerFolder);
         var vaeModelPath = Path.Join(modelWeightFolder, vaeFolder);
         var tokenizer = BPETokenizer.FromPretrained(tokenzierModelPath);
-        var clipTextModel = CLIPTextModel.FromPretrained(textModelPath);
-        var unet = UNet2DConditionModel.FromPretrained(unetModelPath);
-        var vae = AutoencoderKL.FromPretrained(vaeModelPath);
+        var clipTextModel = CLIPTextModel.FromPretrained(textModelPath, torchDtype: torchDtype);
+        var unet = UNet2DConditionModel.FromPretrained(unetModelPath, torchDtype: torchDtype);
+        var vae = AutoencoderKL.FromPretrained(vaeModelPath, torchDtype: torchDtype);
         var scheduler = DDIMScheduler.FromPretrained(schedulerModelPath);
 
         var pipeline = new StableDiffusionPipeline(
@@ -307,7 +314,8 @@ public class StableDiffusionPipeline
             text_encoder: clipTextModel,
             unet: unet,
             tokenizer: tokenizer,
-            scheduler: scheduler);
+            scheduler: scheduler,
+            dtype: torchDtype);
 
         return pipeline;
     }

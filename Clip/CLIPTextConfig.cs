@@ -51,4 +51,7 @@ public class CLIPTextConfig
 
     [JsonPropertyName("use_attention_mask")]
     public bool UseAttentionMask { get; set; } = false;
+
+    [JsonPropertyName("dtype")]
+    public ScalarType DType { get; set; } = ScalarType.Float32;
 }

@@ -7,6 +7,12 @@ public static class Extension
     public static string Peek(this Tensor tensor, string id, int n = 10)
     {
         var device = tensor.device;
+        var dtype = tensor.dtype;
+        // if type is fp16, convert to fp32
+        if (tensor.dtype == ScalarType.Float16)
+        {
+            tensor = tensor.to_type(ScalarType.Float32);
+        }
         tensor = tensor.cpu();
         var shapeString = string.Join(',', tensor.shape);
         var tensor_1d = tensor.reshape(-1);
@@ -15,7 +21,7 @@ public static class Extension
         avg = avg / tensor_1d.sum();
         // keep four decimal places
         avg = avg.round(4);
-        var str = $"{id}: sum: {avg.ToSingle()}  dtype: {tensor.dtype} shape: [{shapeString}]";
+        var str = $"{id}: sum: {avg.ToSingle()}  dtype: {dtype} shape: [{shapeString}]";
 
         Console.WriteLine(str);
 

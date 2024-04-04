@@ -31,8 +31,16 @@ public class AutoencoderKL : Module<Tensor, bool, Generator?, Tensor>, IModelCon
 
     private readonly Conv2d quant_conv;
     private readonly Conv2d post_quant_conv;
+    private readonly ScalarType dtype;
 
-    public AutoencoderKL(Config config)
+    /// <summary>
+    /// Create an AutoencoderKL model.
+    /// </summary>
+    /// <param name="config">AutoencoderKL config</param>
+    /// <param name="dtype">the default dtype to use</param>
+    public AutoencoderKL(
+        Config config,
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(AutoencoderKL))
     {
         this.in_channels = config!.InChannels;
@@ -49,11 +57,12 @@ public class AutoencoderKL : Module<Tensor, bool, Generator?, Tensor>, IModelCon
         this.latents_mean = config!.LatentsMean;
         this.latents_std = config!.LatentsStd;
         this.force_upcast = config!.ForceUpcast;
+        this.dtype = dtype;
 
         
 
-        this.quant_conv = nn.Conv2d(2 * latent_channels, 2 * latent_channels, kernelSize: 1, padding: Padding.Valid);
-        this.post_quant_conv = nn.Conv2d(latent_channels, latent_channels, kernelSize: 1, padding: Padding.Same);
+        this.quant_conv = nn.Conv2d(2 * latent_channels, 2 * latent_channels, kernelSize: 1, padding: Padding.Valid, dtype: this.dtype);
+        this.post_quant_conv = nn.Conv2d(latent_channels, latent_channels, kernelSize: 1, padding: Padding.Same, dtype: this.dtype);
 
         this.Config = config;
 
@@ -64,8 +73,10 @@ public class AutoencoderKL : Module<Tensor, bool, Generator?, Tensor>, IModelCon
             blockOutChannels: block_out_channels,
             layersPerBlock: layers_per_block,
             activationFunction: act_fn,
+            mid_block_from_deprecated_attn_block: config.DecoderMidBlockFromDeprecatedAttnBlock,
             normNumGroups: norm_num_groups,
-            doubleZ: true);
+            doubleZ: true,
+            dtype: this.dtype);
 
         this.decoder = new Decoder(
             in_channels: latent_channels,
@@ -75,7 +86,9 @@ public class AutoencoderKL : Module<Tensor, bool, Generator?, Tensor>, IModelCon
             layers_per_block: layers_per_block,
             norm_num_groups: norm_num_groups,
             act_fn: act_fn,
-            mid_block_add_attention: true);
+            mid_block_from_deprecated_attn_block: config.DecoderMidBlockFromDeprecatedAttnBlock,
+            mid_block_add_attention: true,
+            dtype: this.dtype);
 
         RegisterComponents();
     }
@@ -139,17 +152,24 @@ public class AutoencoderKL : Module<Tensor, bool, Generator?, Tensor>, IModelCon
         var configPath = Path.Combine(pretrainedModelNameOrPath, configName);
         var json = File.ReadAllText(configPath);
         var config = JsonSerializer.Deserialize<Config>(json) ?? throw new ArgumentNullException("config");
-
-        var autoEncoderKL = new AutoencoderKL(config);
+        // if dtype is fp16, default FromDeprecatedAttnBlock to false
+        if (torchDtype == ScalarType.Float16)
+        {
+            config.DecoderMidBlockFromDeprecatedAttnBlock = false;
+            config.EncoderMidBlockAddAttention = false;
+        }
+        var autoEncoderKL = new AutoencoderKL(config, torchDtype);
 
         modelWeightName = (useSafeTensor, torchDtype) switch
         {
             (true, ScalarType.Float32) => $"{modelWeightName}.safetensors",
-            (true, ScalarType.BFloat16) => $"{modelWeightName}.fp16.safetensors",
+            (true, ScalarType.Float16) => $"{modelWeightName}.fp16.safetensors",
             (false, ScalarType.Float32) => $"{modelWeightName}.bin",
-            (false, ScalarType.BFloat16) => $"{modelWeightName}.fp16.bin",
+            (false, ScalarType.Float16) => $"{modelWeightName}.fp16.bin",
             _ => throw new ArgumentException("Invalid arguments for useSafeTensor and torchDtype")
         };
+
+        
 
         var location = Path.Combine(pretrainedModelNameOrPath, modelWeightName);
 

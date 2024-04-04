@@ -17,14 +17,17 @@ public class CLIPAttention : Module<Tensor, Tensor?, Tensor?, bool?, (Tensor, Te
     private readonly Linear v_proj;
     private readonly Linear q_proj;
     private readonly Linear out_proj;
+    private readonly ScalarType dtype;
 
-    public CLIPAttention(CLIPTextConfig config)
+    public CLIPAttention(
+        CLIPTextConfig config)
         : base(nameof(CLIPAttention))
     {
         this.config = config;
         this.embed_dim = config.HiddenSize;
         this.num_heads = config.NumAttentionHeads;
         this.head_dim = this.embed_dim / this.num_heads;
+        this.dtype = config.DType;
         if (this.head_dim * this.num_heads != this.embed_dim)
         {
             throw new ArgumentException("embed_dim must be divisible by num_heads");
@@ -33,10 +36,10 @@ public class CLIPAttention : Module<Tensor, Tensor?, Tensor?, bool?, (Tensor, Te
         this.scale = 1.0f / MathF.Sqrt(this.head_dim);
         this.dropout = config.AttentionDropout;
 
-        this.k_proj = Linear(this.embed_dim, this.embed_dim);
-        this.v_proj = Linear(this.embed_dim, this.embed_dim);
-        this.q_proj = Linear(this.embed_dim, this.embed_dim);
-        this.out_proj = Linear(this.embed_dim, this.embed_dim);
+        this.k_proj = Linear(this.embed_dim, this.embed_dim, dtype: dtype);
+        this.v_proj = Linear(this.embed_dim, this.embed_dim, dtype: dtype);
+        this.q_proj = Linear(this.embed_dim, this.embed_dim, dtype: dtype);
+        this.out_proj = Linear(this.embed_dim, this.embed_dim, dtype: dtype);
         
         RegisterComponents();
     }
@@ -64,7 +67,6 @@ public class CLIPAttention : Module<Tensor, Tensor?, Tensor?, bool?, (Tensor, Te
 
         var src_len = key_states.shape[1];
         var attn_weights = torch.bmm(query_states, key_states.transpose(1, 2));
-
         // attn_weights's shape: (bsz * num_heads, tgt_len, src_len)
 
         if (causal_attention_mask is not null)
@@ -81,7 +83,7 @@ public class CLIPAttention : Module<Tensor, Tensor?, Tensor?, bool?, (Tensor, Te
             attn_weights = attn_weights.view(bsz * this.num_heads, tgt_len, src_len);
         }
 
-        attn_weights = attn_weights.softmax(-1);
+        attn_weights = attn_weights.softmax(-1, dtype: this.config.DType);
         Tensor? attn_weights_reshaped = null;
 
         if (output_attentions == true)
@@ -98,11 +100,10 @@ public class CLIPAttention : Module<Tensor, Tensor?, Tensor?, bool?, (Tensor, Te
         var attn_output = torch.bmm(attn_probs, value_states);
 
         // attn_output's shape: (bsz * num_heads, tgt_len, head_dim)
-
         attn_output = attn_output.view(bsz, this.num_heads, tgt_len, this.head_dim);
         attn_output = attn_output.transpose(1, 2);
-        attn_output = attn_output.contiguous().view(bsz, tgt_len, embed_dim);
-
+        attn_output.Peek("attn_output");
+        attn_output = attn_output.reshape(bsz, tgt_len, embed_dim);
         attn_output = this.out_proj.forward(attn_output);
 
         return (attn_output, attn_weights_reshaped);

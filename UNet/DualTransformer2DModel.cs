@@ -17,7 +17,8 @@ public class DualTransformer2DModel : Module<Tensor, Tensor, Tensor?, Tensor?, T
         int? sample_size = null,
         int? num_vector_embeds = null,
         string activation_fn = "geglu",
-        int? num_embeds_ada_norm = null
+        int? num_embeds_ada_norm = null,
+        ScalarType dtype = ScalarType.Float32
     ) : base(nameof(DualTransformer2DModel))
     {
         this.transformers = new ModuleList<Transformer2DModel>();
@@ -35,7 +36,8 @@ public class DualTransformer2DModel : Module<Tensor, Tensor, Tensor?, Tensor?, T
                 sample_size: sample_size,
                 num_vector_embeds: num_vector_embeds,
                 activation_fn: activation_fn,
-                num_embeds_ada_norm: num_embeds_ada_norm));
+                num_embeds_ada_norm: num_embeds_ada_norm,
+                dtype: dtype));
         }
     }
 

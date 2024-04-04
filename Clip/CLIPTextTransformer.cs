@@ -52,7 +52,7 @@ public class CLIPTextTransformer : Module<Tensor, Tensor?, Tensor?, bool?, bool?
         this.config = config;
         this.embeddings = new CLIPTextEmbeddings(config);
         this.encoder = new CLIPEncoder(config);
-        this.final_layer_norm = LayerNorm(config.HiddenSize, eps: config.LayerNormEps);
+        this.final_layer_norm = LayerNorm(config.HiddenSize, eps: config.LayerNormEps, dtype: config.DType);
         this.eos_token_id = config.EosTokenId;
 
         RegisterComponents();
@@ -72,15 +72,18 @@ public class CLIPTextTransformer : Module<Tensor, Tensor?, Tensor?, bool?, bool?
         input_ids = input_ids.view(-1, input_shape[^1]);
         var hidden_states = this.embeddings.forward(input_ids: input_ids, position_ids: position_ids);
         var casual_attention_mask = AttentionMaskConverter.Create4DCasualAttentionMask(input_shape, hidden_states.dtype, hidden_states.device);
-
         if (attention_mask is not null)
         {
             attention_mask = AttentionMaskConverter.ExpandMask(attention_mask, hidden_states.dtype);
         }
 
+        hidden_states.Peek("hidden_states");
+        attention_mask?.Peek("attention_mask");
+        casual_attention_mask.Peek("casual_attention_mask");
         var encoder_outputs = this.encoder.forward(hidden_states, attention_mask, casual_attention_mask, output_attentions, output_hidden_states);
 
         var last_hidden_state = encoder_outputs.LastHiddenState;
+        last_hidden_state.Peek("last_hidden_state");
         last_hidden_state = this.final_layer_norm.forward(last_hidden_state);
         Tensor pooled_output;
         if (this.eos_token_id == 2)

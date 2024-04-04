@@ -18,9 +18,9 @@ public class CLIPEncoderLayer : Module<Tensor, Tensor?, Tensor?, bool?, (Tensor,
     {
         this.embed_dim = config.HiddenSize;
         this.self_attn = new CLIPAttention(config);
-        this.layer_norm1 = LayerNorm(embed_dim, eps: config.LayerNormEps);
+        this.layer_norm1 = LayerNorm(embed_dim, eps: config.LayerNormEps, dtype: config.DType);
         this.mlp = new CLIPMLP(config);
-        this.layer_norm2 = LayerNorm(embed_dim, eps: config.LayerNormEps);
+        this.layer_norm2 = LayerNorm(embed_dim, eps: config.LayerNormEps, dtype: config.DType);
 
         RegisterComponents();
     }
@@ -34,6 +34,7 @@ public class CLIPEncoderLayer : Module<Tensor, Tensor?, Tensor?, bool?, (Tensor,
         var residual = hidden_states;
         hidden_states = this.layer_norm1.forward(hidden_states);
         (hidden_states, var attention_weights) = this.self_attn.forward(hidden_states, attention_mask, causal_attention_mask, output_attentions);
+        hidden_states.Peek("clip_encoder_layer_hidden_states");
         hidden_states = hidden_states + residual;
         residual = hidden_states;
         hidden_states = this.layer_norm2.forward(hidden_states);

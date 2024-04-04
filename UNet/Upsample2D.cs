@@ -17,6 +17,8 @@ public class Upsample2D : Module<Tensor, int?, Tensor>
     private readonly Module<Tensor, Tensor>? conv;
 
     private readonly Module<Tensor, Tensor>? Conv2d_0;
+    private readonly ScalarType defaultDtype;
+
     public Upsample2D(
         int channels,
         bool use_conv = false,
@@ -29,7 +31,8 @@ public class Upsample2D : Module<Tensor, int?, Tensor>
         float? eps = null,
         bool? elementwise_affine = null,
         bool bias = true,
-        bool interpolate = true)
+        bool interpolate = true,
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(Upsample2D))
         {
             this.channels = channels;
@@ -38,10 +41,11 @@ public class Upsample2D : Module<Tensor, int?, Tensor>
             this.use_conv_transpose = use_conv_transpose;
             this.conv_name = name;
             this.interpolate = interpolate;
+            this.defaultDtype = dtype;
             
             if (norm_type is "ln_norm")
             {
-                this.norm = nn.LayerNorm(normalized_shape: this.channels, eps: eps ?? 1e-5, elementwise_affine: elementwise_affine?? true);
+                this.norm = nn.LayerNorm(normalized_shape: this.channels, eps: eps ?? 1e-5, elementwise_affine: elementwise_affine?? true, dtype: dtype);
             }
             else if (norm_type is null)
             {
@@ -55,11 +59,11 @@ public class Upsample2D : Module<Tensor, int?, Tensor>
             Module<Tensor, Tensor>? conv;
             if (use_conv_transpose)
             {
-                conv = nn.ConvTranspose2d(inputChannel: this.channels, outputChannel: this.out_channels, kernelSize: kernel_size ?? 4, stride: 2, padding: padding, bias: bias);
+                conv = nn.ConvTranspose2d(inputChannel: this.channels, outputChannel: this.out_channels, kernelSize: kernel_size ?? 4, stride: 2, padding: padding, bias: bias, dtype: dtype);
             }
             else if (use_conv)
             {
-                conv = nn.Conv2d(inputChannel: this.channels, outputChannel: this.out_channels, kernelSize: kernel_size ?? 3, stride: 1, padding: padding, bias: bias);
+                conv = nn.Conv2d(inputChannel: this.channels, outputChannel: this.out_channels, kernelSize: kernel_size ?? 3, stride: 1, padding: padding, bias: bias, dtype: dtype);
             }
             else
             {
@@ -90,7 +94,7 @@ public class Upsample2D : Module<Tensor, int?, Tensor>
         }
 
         var dtype = hidden_states.dtype;
-        if (dtype == ScalarType.BFloat16){
+        if (dtype == ScalarType.BFloat16 || dtype == ScalarType.Float16){
             hidden_states = hidden_states.to_type(ScalarType.Float32);
         }
 
@@ -107,8 +111,8 @@ public class Upsample2D : Module<Tensor, int?, Tensor>
             }
         }
 
-        if (dtype == ScalarType.BFloat16){
-            hidden_states = hidden_states.to_type(ScalarType.BFloat16);
+        if (dtype == ScalarType.BFloat16 || dtype == ScalarType.Float16){
+            hidden_states = hidden_states.to_type(dtype);
         }
 
         if (this.use_conv)

@@ -77,7 +77,8 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
             inputChannel: config.InChannels,
             outputChannel: config.BlockOutChannels[0],
             kernelSize: config.ConvInKernel,
-            padding: conv_in_padding);
+            padding: conv_in_padding,
+            dtype: config.DType);
 
         // time
         var (time_embed_dim, timestep_input_dim) = this._set_time_proj(
@@ -92,7 +93,8 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
             time_embed_dim: time_embed_dim,
             act_fn: config.ActFn,
             post_act_fn: config.TimestepPostAct,
-            cond_proj_dim: config.TimeCondProjDim);
+            cond_proj_dim: config.TimeCondProjDim,
+            dtype: config.DType);
 
         // todo class embedding
         // todo add_embedding
@@ -151,7 +153,8 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
                 resnet_out_scale_factor: config.ResnetOutScaleFactor,
                 cross_attention_norm: config.CrossAttentionNorm,
                 attention_head_dim: attention_head_dim_list[i],
-                dropout: config.Dropout);
+                dropout: config.Dropout,
+                dtype: config.DType);
 
             this.down_blocks.Add(down_block);
         }
@@ -177,7 +180,8 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
             resnet_skip_time_act: config.ResnetSkipTimeAct,
             cross_attention_norm: config.CrossAttentionNorm,
             attention_head_dim: attention_head_dim_list[^1],
-            dropout: config.Dropout);
+            dropout: config.Dropout,
+            dtype: config.DType);
 
         this.num_upsamplers = 0;
 
@@ -229,7 +233,8 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
                 resnet_out_scale_factor: config.ResnetOutScaleFactor,
                 cross_attention_norm: config.CrossAttentionNorm,
                 attention_head_dim: attention_head_dim_list[i],
-                dropout: config.Dropout);
+                dropout: config.Dropout,
+                dtype: config.DType);
             
             this.up_blocks.Add(up_block);
             prev_output_channel = output_channel;
@@ -241,7 +246,8 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
             this.conv_norm_out = GroupNorm(
                 num_channels: config.BlockOutChannels[0],
                 num_groups: config.NormNumGroups.Value,
-                eps: config.NormEps);
+                eps: config.NormEps,
+                dtype: config.DType);
             this.conv_act = Utils.GetActivation(config.ActFn);
         }
 
@@ -250,7 +256,8 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
             inputChannel: config.BlockOutChannels[0],
             outputChannel: config.OutChannels,
             kernelSize: config.ConvOutKernel,
-            padding: conv_out_padding);
+            padding: conv_out_padding,
+            dtype: config.DType);
 
         this.RegisterComponents();
     }
@@ -301,7 +308,7 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
 
         timestep = timestep.expand(sample.shape[0]);
         var time_embed = this.time_proj.forward(timestep);
-        time_embed = time_embed.to_type(sample.dtype);
+        time_embed = time_embed.to(sample.dtype);
 
         return time_embed;
     }
@@ -485,15 +492,15 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
         var configPath = Path.Combine(pretrainedModelNameOrPath, configName);
         var json = File.ReadAllText(configPath);
         var config = JsonSerializer.Deserialize<UNet2DConditionModelConfig>(json) ?? throw new ArgumentNullException("Config can't be null");
-
+        config.DType = torchDtype;
         var model = new UNet2DConditionModel(config);
 
         modelWeightName = (useSafeTensor, torchDtype) switch
         {
             (true, ScalarType.Float32) => $"{modelWeightName}.safetensors",
-            (true, ScalarType.BFloat16) => $"{modelWeightName}.fp16.safetensors",
+            (true, ScalarType.Float16) => $"{modelWeightName}.fp16.safetensors",
             (false, ScalarType.Float32) => $"{modelWeightName}.bin",
-            (false, ScalarType.BFloat16) => $"{modelWeightName}.fp16.bin",
+            (false, ScalarType.Float16) => $"{modelWeightName}.fp16.bin",
             _ => throw new ArgumentException("Invalid arguments for useSafeTensor and torchDtype")
         };
 

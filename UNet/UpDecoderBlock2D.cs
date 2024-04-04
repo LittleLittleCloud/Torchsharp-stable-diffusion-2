@@ -19,6 +19,7 @@ public class UpDecoderBlock2D : Module<Tensor, Tensor?, Tensor>
     private readonly float output_scale_factor;
     private readonly bool add_upsample;
     private readonly int? temb_channels;
+    private readonly ScalarType dtype;
 
     private readonly ModuleList<Module<Tensor, Tensor?, Tensor>> resnets;
     private readonly ModuleList<Module<Tensor, int?, Tensor>>? upsamplers = null;
@@ -35,7 +36,8 @@ public class UpDecoderBlock2D : Module<Tensor, Tensor?, Tensor>
         bool resnet_pre_norm = true,
         float output_scale_factor = 1.0f,
         bool add_upsample = true,
-        int? temb_channels = null)
+        int? temb_channels = null,
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(UpDecoderBlock2D))
     {
         this.in_channels = in_channels;
@@ -51,6 +53,7 @@ public class UpDecoderBlock2D : Module<Tensor, Tensor?, Tensor>
         this.output_scale_factor = output_scale_factor;
         this.add_upsample = add_upsample;
         this.temb_channels = temb_channels;
+        this.dtype = dtype;
 
         this.resnets = new ModuleList<Module<Tensor, Tensor?, Tensor>>();
         for(int i = 0; i!= num_layers; ++i)
@@ -67,7 +70,8 @@ public class UpDecoderBlock2D : Module<Tensor, Tensor?, Tensor>
                         groups: resnet_groups,
                         time_embedding_norm: "spatial",
                         non_linearity: resnet_act_fn,
-                        output_scale_factor: output_scale_factor)
+                        output_scale_factor: output_scale_factor,
+                        dtype: dtype)
                 );
             }
             else
@@ -82,7 +86,8 @@ public class UpDecoderBlock2D : Module<Tensor, Tensor?, Tensor>
                         eps: resnet_eps,
                         non_linearity: resnet_act_fn,
                         time_embedding_norm: resnet_time_scale_shift,
-                        output_scale_factor: output_scale_factor)
+                        output_scale_factor: output_scale_factor,
+                        dtype: dtype)
                 );
             }
         }
@@ -93,7 +98,8 @@ public class UpDecoderBlock2D : Module<Tensor, Tensor?, Tensor>
             this.upsamplers.Add(new Upsample2D(
                 channels: out_channels,
                 use_conv: true,
-                out_channels: out_channels
+                out_channels: out_channels,
+                dtype: dtype
             ));
         }
 

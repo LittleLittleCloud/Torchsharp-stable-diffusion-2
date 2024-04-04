@@ -1,0 +1,1 @@
+﻿images: sum: 976.4648  dtype: Float32 shape: [1,3,768,768]

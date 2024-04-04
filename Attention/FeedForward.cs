@@ -13,15 +13,16 @@ public class FeedForward : Module<Tensor, Tensor>
         string activation_fn = "geglu",
         bool final_dropout = false,
         int? inner_dim = null,
-        bool bias = true)
+        bool bias = true,
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(FeedForward))
     {
         inner_dim = inner_dim ?? (int)(dim * mult);
         dim_out = dim_out ?? dim;
-        var act_fn = new GEGLU(dim, inner_dim.Value, bias);
+        var act_fn = new GEGLU(dim, inner_dim.Value, bias, dtype: dtype);
         if (activation_fn == "geglu")
         {
-            act_fn = new GEGLU(dim, inner_dim.Value, bias);
+            act_fn = new GEGLU(dim, inner_dim.Value, bias, dtype: dtype);
         }
         else
         {
@@ -34,7 +35,7 @@ public class FeedForward : Module<Tensor, Tensor>
         // project dropout
         net.Add(nn.Dropout(dropout));
         // project out
-        net.Add(Linear(inner_dim.Value, dim_out.Value, bias));
+        net.Add(Linear(inner_dim.Value, dim_out.Value, bias, dtype: dtype));
         // FF as used in Vision Transformer, MLP-Mixer, etc. have a final dropout
         if (final_dropout)
         {

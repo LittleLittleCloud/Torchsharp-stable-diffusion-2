@@ -9,6 +9,8 @@ public class UNetMidBlock2D : Module<UNetMidBlock2DInput, Tensor>
     private readonly ModuleList<Attention?> attentions;
     private readonly ModuleList<Module<Tensor, Tensor?, Tensor>> resnets;
     private readonly bool add_attention;
+    private readonly ScalarType defaultDtype;
+
     public UNetMidBlock2D(
         int in_channels,
         int? temb_channels = null,
@@ -21,12 +23,15 @@ public class UNetMidBlock2D : Module<UNetMidBlock2DInput, Tensor>
         int? attn_groups = null,
         bool resnet_pre_norm = true,
         bool add_attention = true,
+        bool from_deprecated_attn_block = true,
         int attention_head_dim = 1,
-        float output_scale_factor = 1.0f)
+        float output_scale_factor = 1.0f,
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(UNetMidBlock2D))
     {
         resnet_groups = resnet_groups ?? Math.Min(in_channels / 4, 32);
         this.add_attention = add_attention;
+        this.defaultDtype = dtype;
 
         if (attn_groups is null)
         {
@@ -46,7 +51,8 @@ public class UNetMidBlock2D : Module<UNetMidBlock2DInput, Tensor>
                     dropout: dropout,
                     time_embedding_norm: "spatial",
                     non_linearity: resnet_act_fn,
-                    output_scale_factor: output_scale_factor)
+                    output_scale_factor: output_scale_factor,
+                    dtype: dtype)
             );
         }
         else
@@ -62,7 +68,8 @@ public class UNetMidBlock2D : Module<UNetMidBlock2DInput, Tensor>
                     time_embedding_norm: resnet_time_scale_shift,
                     non_linearity: resnet_act_fn,
                     output_scale_factor: output_scale_factor,
-                    pre_norm: resnet_pre_norm)
+                    pre_norm: resnet_pre_norm,
+                    dtype: dtype)
             );
         }
 
@@ -83,7 +90,8 @@ public class UNetMidBlock2D : Module<UNetMidBlock2DInput, Tensor>
                         residual_connection: true,
                         bias: true,
                         upcast_softmax: true,
-                        _from_deprecated_attn_block: true)
+                        _from_deprecated_attn_block: from_deprecated_attn_block,
+                        dtype: dtype)
                 );
             }
             else
@@ -103,7 +111,8 @@ public class UNetMidBlock2D : Module<UNetMidBlock2DInput, Tensor>
                         dropout: dropout,
                         time_embedding_norm: "spatial",
                         non_linearity: resnet_act_fn,
-                        output_scale_factor: output_scale_factor)
+                        output_scale_factor: output_scale_factor,
+                        dtype: dtype)
                 );
             }
             else
@@ -119,7 +128,8 @@ public class UNetMidBlock2D : Module<UNetMidBlock2DInput, Tensor>
                         time_embedding_norm: resnet_time_scale_shift,
                         non_linearity: resnet_act_fn,
                         output_scale_factor: output_scale_factor,
-                        pre_norm: resnet_pre_norm)
+                        pre_norm: resnet_pre_norm,
+                        dtype: dtype)
                 );
             }
         }

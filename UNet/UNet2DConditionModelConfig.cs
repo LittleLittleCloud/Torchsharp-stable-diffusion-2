@@ -156,4 +156,6 @@ public class UNet2DConditionModelConfig
 
     [JsonPropertyName("addition_embed_type_num_heads")]
     public int AdditionEmbedTypeNumHeads {get; set;} = 64;
+
+    public ScalarType DType {get; set;} = ScalarType.Float32;
 }

@@ -17,6 +17,7 @@ public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
     private readonly string time_embedding_norm;
     private bool skip_time_act;
     private readonly bool use_in_shortcut;
+    private readonly ScalarType defaultDtype;
 
     private Module<Tensor, Tensor> norm1;
     private Module<Tensor, Tensor> conv1;
@@ -47,9 +48,11 @@ public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
         bool up = false,
         bool down = false,
         bool conv_shortcut_bias = true,
-        int? conv_2d_out_channels = null)
+        int? conv_2d_out_channels = null,
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(ResnetBlock2D))
         {
+            this.defaultDtype = dtype;
             if (time_embedding_norm == "ada_group" || time_embedding_norm == "spatial")
             {
                 throw new ArgumentException("Invalid time_embedding_norm: " + time_embedding_norm);
@@ -67,17 +70,17 @@ public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
 
             groups_out = groups_out ?? groups;
 
-            this.norm1 = nn.GroupNorm(num_groups: groups, num_channels: in_channels, eps: eps, affine: true);
-            this.conv1 = nn.Conv2d(in_channels, this.out_channels, kernelSize: 3, stride: 1, padding: 1, bias: true);
+            this.norm1 = nn.GroupNorm(num_groups: groups, num_channels: in_channels, eps: eps, affine: true, dtype: dtype);
+            this.conv1 = nn.Conv2d(in_channels, this.out_channels, kernelSize: 3, stride: 1, padding: 1, bias: true, dtype: dtype);
 
             if (temb_channels is not null)
             {
                 if (this.time_embedding_norm == "default"){
-                    this.time_emb_proj = nn.Linear(temb_channels.Value, this.out_channels);
+                    this.time_emb_proj = nn.Linear(temb_channels.Value, this.out_channels, dtype: dtype);
                 }
                 else if (this.time_embedding_norm == "scale_shift")
                 {
-                    this.time_emb_proj = nn.Linear(temb_channels.Value, this.out_channels * 2);
+                    this.time_emb_proj = nn.Linear(temb_channels.Value, this.out_channels * 2, dtype: dtype);
                 }
                 else{
                     throw new ArgumentException("Invalid time_embedding_norm: " + time_embedding_norm);
@@ -87,23 +90,23 @@ public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
                 this.time_emb_proj = null;
             }
 
-            this.norm2 = nn.GroupNorm(num_groups: groups_out.Value, num_channels: this.out_channels, eps: eps, affine: true);
+            this.norm2 = nn.GroupNorm(num_groups: groups_out.Value, num_channels: this.out_channels, eps: eps, affine: true, dtype: dtype);
             this.dropout = nn.Dropout(dropout);
             conv_2d_out_channels = conv_2d_out_channels ?? this.out_channels;
-            this.conv2 = nn.Conv2d(this.out_channels, conv_2d_out_channels.Value, kernelSize: 3, stride: 1, padding: 1, bias: true);
+            this.conv2 = nn.Conv2d(this.out_channels, conv_2d_out_channels.Value, kernelSize: 3, stride: 1, padding: 1, bias: true, dtype: dtype);
             this.nonlinearity = Utils.GetActivation(non_linearity);
             if (this.up){
-                this.upsample = new Upsample2D(channels: in_channels, use_conv: false);
+                this.upsample = new Upsample2D(channels: in_channels, use_conv: false, dtype: dtype, padding: 1, name: "op");
             }
             else if (this.down){
-                this.downsample = new Downsample2D(channels: in_channels, use_conv: false, padding: 1, name: "op");
+                this.downsample = new Downsample2D(channels: in_channels, use_conv: false, padding: 1, name: "op", dtype: dtype);
             }
 
             this.use_in_shortcut = use_in_shortcut ?? this.in_channels != conv_2d_out_channels;
 
             if (this.use_in_shortcut)
             {
-                this.conv_shortcut = nn.Conv2d(in_channels, this.out_channels, kernelSize: 1, stride: 1, padding: TorchSharp.Padding.Valid, bias: conv_shortcut_bias);
+                this.conv_shortcut = nn.Conv2d(in_channels, this.out_channels, kernelSize: 1, stride: 1, padding: TorchSharp.Padding.Valid, bias: conv_shortcut_bias, dtype: dtype);
             }
         }
 

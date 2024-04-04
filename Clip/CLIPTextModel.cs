@@ -46,6 +46,7 @@ public class CLIPTextModel : Module<Tensor, Tensor?, Tensor?, bool?, bool?, Base
         var configPath = Path.Combine(pretrainedModelNameOrPath, configName);
         var json = File.ReadAllText(configPath);
         var config = JsonSerializer.Deserialize<CLIPTextConfig>(json) ?? throw new ArgumentNullException(nameof(CLIPTextConfig));
+        config.DType = torchDtype;
 
         var clipTextModel = new CLIPTextModel(config);
 

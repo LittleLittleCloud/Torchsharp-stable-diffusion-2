@@ -52,10 +52,18 @@ public class AttentionMaskConverter
         // Make causal mask used for bi-directional self-attention.
         var bsz = input_ids_shape[0];
         var tgt_len = input_ids_shape[1];
-        var mask = torch.full([tgt_len, tgt_len], torch.finfo(dtype).min, dtype: dtype, device: device);
+        var min = dtype switch
+        {
+            ScalarType.Float32 => torch.finfo(dtype).min,
+            ScalarType.Float64 => torch.finfo(dtype).min,
+            ScalarType.Float16 => -65504.0,
+            _ => throw new ArgumentException("Invalid dtype"),
+        };
+        var mask = torch.full([tgt_len, tgt_len], min, dtype: dtype, device: device);
         var mask_cond = torch.arange(tgt_len, device: device);
         mask.masked_fill_(mask_cond < (mask_cond + 1).view(tgt_len, 1), 0);
         mask = mask.to(dtype);
+
 
         if (past_key_values_length > 0)
         {
@@ -66,7 +74,7 @@ public class AttentionMaskConverter
         {
             var diagonal = past_key_values_length - window - 1;
             var context_mask = torch.tril(torch.ones([tgt_len, tgt_len], dtype: ScalarType.Bool, device: device), diagonal: diagonal);
-            mask = mask.masked_fill(context_mask, torch.finfo(dtype).min);
+            mask = mask.masked_fill(context_mask, min);
         }
 
         // return mask[None, None, :, :].expand(bsz, 1, tgt_len, tgt_len + past_key_values_length)
@@ -103,7 +111,14 @@ public class AttentionMaskConverter
 
         var expanded_mask = mask.unsqueeze(1).unsqueeze(1).expand(bsz, 1, tgt_len.Value, src_len).to(dtype);
         var inverted_mask = 1.0 - expanded_mask;
+        var min = dtype switch
+        {
+            ScalarType.Float32 => torch.finfo(dtype).min,
+            ScalarType.Float64 => torch.finfo(dtype).min,
+            ScalarType.Float16 => -65504.0,
+            _ => throw new ArgumentException("Invalid dtype"),
+        };
 
-        return inverted_mask.masked_fill(inverted_mask.to(ScalarType.Bool), torch.finfo(dtype).min);
+        return inverted_mask.masked_fill(inverted_mask.to(ScalarType.Bool), min);
     }
 }

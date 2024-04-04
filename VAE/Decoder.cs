@@ -7,15 +7,6 @@ namespace SD;
 
 public class Decoder : Module<Tensor, Tensor?, Tensor>
 {
-        // in_channels: int = 3,
-        // out_channels: int = 3,
-        // up_block_types: Tuple[str, ...] = ("UpDecoderBlock2D",),
-        // block_out_channels: Tuple[int, ...] = (64,),
-        // layers_per_block: int = 2,
-        // norm_num_groups: int = 32,
-        // act_fn: str = "silu",
-        // norm_type: str = "group",  # group, spatial
-        // mid_block_add_attention=True,
     private readonly int in_channels;
     private readonly int out_channels;
     private readonly string[] up_block_types;
@@ -25,6 +16,7 @@ public class Decoder : Module<Tensor, Tensor?, Tensor>
     private readonly string act_fn;
     private readonly string norm_type;
     private readonly bool mid_block_add_attention;
+    private readonly ScalarType dtype;
 
     private readonly Conv2d conv_in;
     private readonly Module conv_norm_out;
@@ -41,12 +33,14 @@ public class Decoder : Module<Tensor, Tensor?, Tensor>
         int norm_num_groups = 32,
         string act_fn = "silu",
         string norm_type = "group",
-        bool mid_block_add_attention = true)
+        bool mid_block_add_attention = true,
+        bool mid_block_from_deprecated_attn_block = true,
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(Decoder))
     {
-        up_block_types = up_block_types ?? new string[] { "UpDecoderBlock2D" };
+        up_block_types = up_block_types ?? new string[] { nameof(UpDecoderBlock2D) };
         block_out_channels = block_out_channels ?? new int[] { 64 };
-
+        this.dtype = dtype;
         this.in_channels = in_channels;
         this.out_channels = out_channels;
         this.up_block_types = up_block_types;
@@ -57,7 +51,7 @@ public class Decoder : Module<Tensor, Tensor?, Tensor>
         this.norm_type = norm_type;
         this.mid_block_add_attention = mid_block_add_attention;
 
-        this.conv_in = torch.nn.Conv2d(this.in_channels, this.block_out_channels[^1], kernelSize: 3, stride: 1, padding: 1);
+        this.conv_in = torch.nn.Conv2d(this.in_channels, this.block_out_channels[^1], kernelSize: 3, stride: 1, padding: 1, dtype: this.dtype);
         int? temb_channels = norm_type == "spatial" ? in_channels : null;
 
         // mid
@@ -70,7 +64,9 @@ public class Decoder : Module<Tensor, Tensor?, Tensor>
             attention_head_dim: this.block_out_channels[^1],
             resnet_groups: norm_num_groups,
             temb_channels: temb_channels,
-            add_attention: mid_block_add_attention);
+            add_attention: mid_block_add_attention,
+            from_deprecated_attn_block: mid_block_from_deprecated_attn_block,
+            dtype: this.dtype);
 
         // up
         var reversed_block_out_channels = block_out_channels.Reverse().ToArray();
@@ -90,7 +86,8 @@ public class Decoder : Module<Tensor, Tensor?, Tensor>
                 resnet_eps: 1e-6f,
                 resnet_act_fn: act_fn,
                 resnet_groups: norm_num_groups,
-                temb_channels: temb_channels);
+                temb_channels: temb_channels,
+                dtype: this.dtype);
             
             this.up_blocks.Add(up_block);
             prev_output_channel = output_channel;
@@ -99,15 +96,15 @@ public class Decoder : Module<Tensor, Tensor?, Tensor>
         // out
         if (norm_type == "spatial")
         {
-            this.conv_norm_out = new SpatialNorm(block_out_channels[0], temb_channels ?? 512);
+            this.conv_norm_out = new SpatialNorm(block_out_channels[0], temb_channels ?? 512, dtype: this.dtype);
         }
         else
         {
-            this.conv_norm_out = GroupNorm(num_channels: block_out_channels[0], num_groups: norm_num_groups, eps: 1e-6f);
+            this.conv_norm_out = GroupNorm(num_channels: block_out_channels[0], num_groups: norm_num_groups, eps: 1e-6f, dtype: this.dtype);
         }
 
         this.conv_act = nn.SiLU();
-        this.conv_out = nn.Conv2d(block_out_channels[0], out_channels, kernelSize: 3, padding: Padding.Same);
+        this.conv_out = nn.Conv2d(block_out_channels[0], out_channels, kernelSize: 3, padding: Padding.Same, dtype: this.dtype);
 
         RegisterComponents();
     }

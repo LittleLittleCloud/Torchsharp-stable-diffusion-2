@@ -58,7 +58,8 @@ public class DownBlock2D: Module<DownBlock2DInput, DownBlock2DOutput>
         bool resnet_pre_norm = true,
         float output_scale_factor = 1.0f,
         bool? add_downsample = true,
-        int? downsample_padding = 1)
+        int? downsample_padding = 1,
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(DownBlock2D))
     {
         var resnets = new ModuleList<ResnetBlock2D>();
@@ -75,7 +76,8 @@ public class DownBlock2D: Module<DownBlock2DInput, DownBlock2DOutput>
                 time_embedding_norm: resnet_time_scale_shift,
                 non_linearity: resnet_act_fn,
                 output_scale_factor: output_scale_factor,
-                pre_norm: resnet_pre_norm));
+                pre_norm: resnet_pre_norm,
+                dtype: dtype));
         }
 
         this.resnets = resnets;
@@ -88,7 +90,8 @@ public class DownBlock2D: Module<DownBlock2DInput, DownBlock2DOutput>
                 use_conv: true,
                 out_channels: out_channels,
                 name: "op",
-                padding: downsample_padding));
+                padding: downsample_padding,
+                dtype: dtype));
         }
     }
 

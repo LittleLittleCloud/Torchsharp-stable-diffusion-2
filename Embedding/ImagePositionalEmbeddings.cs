@@ -19,7 +19,8 @@ public class ImagePositionalEmbeddings : Module<Tensor, Tensor>
         int num_embed,
         int height,
         int width,
-        int embed_dim
+        int embed_dim,
+        ScalarType dtype = ScalarType.Float32
     ) : base(nameof(ImagePositionalEmbeddings))
     {
         this.height = height;
@@ -27,9 +28,9 @@ public class ImagePositionalEmbeddings : Module<Tensor, Tensor>
         this.num_embed = num_embed;
         this.embed_dim = embed_dim;
 
-        this.emb = Embedding(num_embed, embed_dim);
-        this.height_emb = Embedding(height, embed_dim);
-        this.width_emb = Embedding(width, embed_dim);
+        this.emb = Embedding(num_embed, embed_dim, dtype: dtype);
+        this.height_emb = Embedding(height, embed_dim, dtype: dtype);
+        this.width_emb = Embedding(width, embed_dim, dtype: dtype);
 
         RegisterComponents();
     }

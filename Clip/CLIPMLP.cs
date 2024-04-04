@@ -17,8 +17,8 @@ public class CLIPMLP : Module<Tensor, Tensor>
     {
         this.config = config;
         this.activation_fn = Utils.GetActivation(config.HiddenAct);
-        this.fc1 = Linear(config.HiddenSize, config.IntermediateSize);
-        this.fc2 = Linear(config.IntermediateSize, config.HiddenSize);
+        this.fc1 = Linear(config.HiddenSize, config.IntermediateSize, dtype: config.DType);
+        this.fc2 = Linear(config.IntermediateSize, config.HiddenSize, dtype: config.DType);
         RegisterComponents();
     }
 

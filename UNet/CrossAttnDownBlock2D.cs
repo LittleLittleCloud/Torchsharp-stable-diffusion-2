@@ -29,7 +29,8 @@ public class CrossAttnDownBlock2D : Module<DownBlock2DInput, DownBlock2DOutput>
         bool use_linear_projection = false,
         bool only_cross_attention = false,
         bool upcast_attention = false,
-        string attention_type = "default"
+        string attention_type = "default",
+        ScalarType dtype = ScalarType.Float32
     ): base(nameof(CrossAttnDownBlock2D))
     {
         ModuleList<ResnetBlock2D> resnets = new ModuleList<ResnetBlock2D>();
@@ -53,7 +54,8 @@ public class CrossAttnDownBlock2D : Module<DownBlock2DInput, DownBlock2DOutput>
                     time_embedding_norm: resnet_time_scale_shift,
                     non_linearity: resnet_act_fn,
                     output_scale_factor: (float)output_scale_factor,
-                    pre_norm: resnet_pre_norm));
+                    pre_norm: resnet_pre_norm,
+                    dtype: dtype));
 
             if (!dual_cross_attention)
             {
@@ -68,7 +70,8 @@ public class CrossAttnDownBlock2D : Module<DownBlock2DInput, DownBlock2DOutput>
                         use_linear_projection: use_linear_projection,
                         only_cross_attention: only_cross_attention,
                         upcast_attention: upcast_attention,
-                        attention_type: attention_type));
+                        attention_type: attention_type,
+                        dtype: dtype));
             }
             else
             {
@@ -79,7 +82,8 @@ public class CrossAttnDownBlock2D : Module<DownBlock2DInput, DownBlock2DOutput>
                         in_channels: out_channels,
                         num_layers: 1,
                         cross_attention_dim: cross_attention_dim,
-                        norm_num_groups: resnet_groups ?? 32));
+                        norm_num_groups: resnet_groups ?? 32,
+                        dtype: dtype));
             }
         }
 
@@ -95,7 +99,8 @@ public class CrossAttnDownBlock2D : Module<DownBlock2DInput, DownBlock2DOutput>
                     use_conv: true,
                     out_channels: out_channels,
                     padding: downsample_padding,
-                    name: "op"));
+                    name: "op",
+                    dtype: dtype));
         }
     }
 

@@ -12,6 +12,8 @@ public class Downsample2D : Module<Tensor, Tensor>
     private readonly int? padding;
     private readonly string conv_name;
 
+    private readonly ScalarType defaultDtype;
+
     private readonly Module<Tensor, Tensor>? conv;
     private readonly Module<Tensor, Tensor>? Conv2d_0;
     private readonly Module<Tensor, Tensor>? norm;
@@ -25,7 +27,8 @@ public class Downsample2D : Module<Tensor, Tensor>
         string? norm_type = null,
         float eps = 1e-5f,
         bool elementwise_affine = false,
-        bool bias = true)
+        bool bias = true,
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(Downsample2D))
         {
             this.channels = channels;
@@ -33,10 +36,11 @@ public class Downsample2D : Module<Tensor, Tensor>
             this.use_conv = use_conv;
             this.padding = padding;
             this.conv_name = name;
+            this.defaultDtype = dtype;
             
             if (norm_type is "ln_norm")
             {
-                this.norm = nn.LayerNorm(normalized_shape: this.channels, eps: eps, elementwise_affine: elementwise_affine);
+                this.norm = nn.LayerNorm(normalized_shape: this.channels, eps: eps, elementwise_affine: elementwise_affine, dtype: dtype);
             }
             else if (norm_type is null)
             {
@@ -50,7 +54,7 @@ public class Downsample2D : Module<Tensor, Tensor>
             Module<Tensor, Tensor> conv;
             if (use_conv)
             {
-                conv = nn.Conv2d(inputChannel: this.channels, outputChannel: this.out_channels, kernelSize: kernel_size, stride: 2, padding: padding ?? 1, bias: bias);
+                conv = nn.Conv2d(inputChannel: this.channels, outputChannel: this.out_channels, kernelSize: kernel_size, stride: 2, padding: padding ?? 1, bias: bias, dtype: dtype);
             }
             else
             {

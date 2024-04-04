@@ -25,6 +25,7 @@ public class Attention : Module<Tensor, Tensor?, Tensor?, Tensor?, Tensor>
     private readonly int sliceable_head_dim;
     private readonly int? added_kv_proj_dim;
     private readonly bool only_cross_attention;
+    private readonly ScalarType dtype;
 
     private readonly AttnProcessorBase processor;
 
@@ -90,7 +91,8 @@ public class Attention : Module<Tensor, Tensor?, Tensor?, Tensor?, Tensor>
         bool residual_connection = false,
         AttnProcessorBase? processor = null,
         int? out_dim = null,
-        bool _from_deprecated_attn_block = false)
+        bool _from_deprecated_attn_block = false,
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(Attention))
         {
             this.inner_dim = out_dim ?? dim_head * heads;
@@ -120,22 +122,22 @@ public class Attention : Module<Tensor, Tensor?, Tensor?, Tensor?, Tensor>
 
             if (norm_num_groups != null)
             {
-                this.group_norm = GroupNorm(num_channels: query_dim, num_groups: norm_num_groups.Value, eps: eps, affine: true);
+                this.group_norm = GroupNorm(num_channels: query_dim, num_groups: norm_num_groups.Value, eps: eps, affine: true, dtype: dtype);
             }
 
             if (spatial_norm_dim != null)
             {
-                this.spatial_norm = new SpatialNorm(f_channels: query_dim, zq_channels: spatial_norm_dim.Value);
+                this.spatial_norm = new SpatialNorm(f_channels: query_dim, zq_channels: spatial_norm_dim.Value, dtype: dtype);
             }
 
             if (cross_attention_norm == "layer_norm")
             {
-                this.norm_cross = LayerNorm(this.cross_attention_dim);
+                this.norm_cross = LayerNorm(this.cross_attention_dim, dtype: dtype, eps: eps, elementwise_affine: true);
             }
             else if (cross_attention_norm == "group_norm")
             {
                 var norm_cross_num_channels = this.added_kv_proj_dim ?? this.cross_attention_dim;
-                this.norm_cross = GroupNorm(num_channels: norm_cross_num_channels, num_groups: cross_attention_norm_num_groups, eps: eps, affine: true);
+                this.norm_cross = GroupNorm(num_channels: norm_cross_num_channels, num_groups: cross_attention_norm_num_groups, eps: eps, affine: true, dtype: dtype);
             }
             else if (cross_attention_norm != null)
             {
@@ -146,21 +148,21 @@ public class Attention : Module<Tensor, Tensor?, Tensor?, Tensor?, Tensor>
 
             if (_from_deprecated_attn_block)
             {
-                this.query = Linear(query_dim, this.inner_dim, hasBias: this.use_bias);
+                this.query = Linear(query_dim, this.inner_dim, hasBias: this.use_bias, dtype: dtype);
                 if (!this.only_cross_attention)
                 {
-                    this.key = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias);
-                    this.value = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias);
+                    this.key = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias, dtype: dtype);
+                    this.value = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias, dtype: dtype);
                 }
 
                 if (this.added_kv_proj_dim != null)
                 {
-                    this.add_k_proj = Linear(this.added_kv_proj_dim.Value, this.inner_dim);
-                    this.add_v_proj = Linear(this.added_kv_proj_dim.Value, this.inner_dim);
+                    this.add_k_proj = Linear(this.added_kv_proj_dim.Value, this.inner_dim, dtype: dtype);
+                    this.add_v_proj = Linear(this.added_kv_proj_dim.Value, this.inner_dim, dtype: dtype);
                 }
-                this.key = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias);
-                this.value = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias);
-                this.proj_attn = Linear(this.inner_dim, this.out_dim, hasBias: out_bias);
+                this.key = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias, dtype: dtype);
+                this.value = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias, dtype: dtype);
+                this.proj_attn = Linear(this.inner_dim, this.out_dim, hasBias: out_bias, dtype: dtype);
                 RegisterComponents();
 
                 this.to_q = this.query;
@@ -173,21 +175,21 @@ public class Attention : Module<Tensor, Tensor?, Tensor?, Tensor?, Tensor>
             }
             else
             {
-                this.to_q = Linear(query_dim, this.inner_dim, hasBias: this.use_bias);
+                this.to_q = Linear(query_dim, this.inner_dim, hasBias: this.use_bias, dtype: dtype);
 
                 if (!this.only_cross_attention){
-                    this.to_k = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias);
-                    this.to_v = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias);
+                    this.to_k = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias, dtype: dtype);
+                    this.to_v = Linear(this.cross_attention_dim, this.inner_dim, hasBias: this.use_bias, dtype: dtype);
                 }
 
                 if (this.added_kv_proj_dim != null)
                 {
-                    this.add_k_proj = Linear(this.added_kv_proj_dim.Value, this.inner_dim);
-                    this.add_v_proj = Linear(this.added_kv_proj_dim.Value, this.inner_dim);
+                    this.add_k_proj = Linear(this.added_kv_proj_dim.Value, this.inner_dim, dtype: dtype);
+                    this.add_v_proj = Linear(this.added_kv_proj_dim.Value, this.inner_dim, dtype: dtype);
                 }
 
                 this.to_out = new ModuleList<Module<Tensor, Tensor>>();
-                this.to_out.Add(nn.Linear(this.inner_dim, this.out_dim, hasBias: out_bias));
+                this.to_out.Add(nn.Linear(this.inner_dim, this.out_dim, hasBias: out_bias, dtype: dtype));
                 this.to_out.Add(nn.Dropout(dropout));
                 RegisterComponents();
             }
