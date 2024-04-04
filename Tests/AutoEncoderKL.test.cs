@@ -25,6 +25,17 @@ public class AutoEncoderKLTest
     [Fact]
     [UseReporter(typeof(DiffReporter))]
     [UseApprovalSubdirectory("Approvals")]
+    public async Task Fp16ShapeTest()
+    {
+        var modelWeightFolder = "/home/xiaoyuz/stable-diffusion-2/vae";
+        var autoKL = AutoencoderKL.FromPretrained(modelWeightFolder, torchDtype: ScalarType.Float16);
+        var state_dict_str = autoKL.Peek();
+        Approvals.Verify(state_dict_str);
+    }
+
+    [Fact]
+    [UseReporter(typeof(DiffReporter))]
+    [UseApprovalSubdirectory("Approvals")]
     public async Task EncoderForwardTest()
     {
         var modelWeightFolder = "/home/xiaoyuz/stable-diffusion-2/vae";

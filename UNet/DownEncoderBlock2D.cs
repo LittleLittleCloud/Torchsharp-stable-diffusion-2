@@ -7,6 +7,7 @@ namespace SD;
 
 public class DownEncoderBlock2D : Module<Tensor, Tensor>
 {
+    private readonly ScalarType dtype;
     private readonly ModuleList<Module<Tensor, Tensor?, Tensor>> resnets;
     private readonly ModuleList<Module<Tensor,  Tensor>>? downsamplers;
     public DownEncoderBlock2D(
@@ -21,9 +22,11 @@ public class DownEncoderBlock2D : Module<Tensor, Tensor>
         bool resnet_pre_norm = true,
         float output_scale_factor = 1.0f,
         bool add_downsample = true,
-        int downsample_padding = 1)
+        int downsample_padding = 1,
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(DownEncoderBlock2D))
         {
+            this.dtype = dtype;
             this.resnets = new ModuleList<Module<Tensor, Tensor?, Tensor>>();
             for (int i = 0; i < num_layers; i++)
             {
@@ -44,7 +47,8 @@ public class DownEncoderBlock2D : Module<Tensor, Tensor>
                         down: false,
                         conv_2d_out_channels: out_channels,
                         conv_shortcut: false,
-                        conv_shortcut_bias: true
+                        conv_shortcut_bias: true,
+                        dtype: dtype
                     ));
                 }
                 else
@@ -64,7 +68,8 @@ public class DownEncoderBlock2D : Module<Tensor, Tensor>
                         down: false,
                         conv_2d_out_channels: out_channels,
                         conv_shortcut: false,
-                        conv_shortcut_bias: true
+                        conv_shortcut_bias: true,
+                        dtype: dtype
                     ));
                 }
             }
@@ -77,7 +82,8 @@ public class DownEncoderBlock2D : Module<Tensor, Tensor>
                     use_conv: true,
                     out_channels: out_channels,
                     padding: downsample_padding,
-                    name: "op"
+                    name: "op",
+                    dtype: dtype
                 ));
             }
         }

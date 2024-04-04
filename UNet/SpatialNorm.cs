@@ -9,14 +9,19 @@ public class SpatialNorm : Module<Tensor, Tensor, Tensor>
     private readonly Module<Tensor, Tensor> norm_layer;
     private readonly Module<Tensor, Tensor> conv_y;
     private readonly Module<Tensor, Tensor> conv_b;
+
+    private readonly ScalarType defaultDtype;
+
     public SpatialNorm(
         int f_channels,
-        int zq_channels
-    ) : base(nameof(SpatialNorm))
+        int zq_channels,
+        ScalarType dtype = ScalarType.Float32)
+        : base(nameof(SpatialNorm))
     {
-        this.norm_layer = nn.GroupNorm(num_channels: f_channels, num_groups: 32, eps: 1e-6f, affine: true);
-        this.conv_y = nn.Conv2d(inputChannel: zq_channels, outputChannel: f_channels, kernelSize: 1, stride: 1, padding: TorchSharp.Padding.Valid);
-        this.conv_b = nn.Conv2d(inputChannel: zq_channels, outputChannel: f_channels, kernelSize: 1, stride: 1, padding: TorchSharp.Padding.Valid);
+        this.defaultDtype = dtype;
+        this.norm_layer = nn.GroupNorm(num_channels: f_channels, num_groups: 32, eps: 1e-6f, affine: true, dtype: dtype);
+        this.conv_y = nn.Conv2d(inputChannel: zq_channels, outputChannel: f_channels, kernelSize: 1, stride: 1, padding: TorchSharp.Padding.Valid, dtype: dtype);
+        this.conv_b = nn.Conv2d(inputChannel: zq_channels, outputChannel: f_channels, kernelSize: 1, stride: 1, padding: TorchSharp.Padding.Valid, dtype: dtype);
 
         RegisterComponents();
     }

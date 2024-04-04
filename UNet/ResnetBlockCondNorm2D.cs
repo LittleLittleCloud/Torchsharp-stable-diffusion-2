@@ -15,6 +15,7 @@ public class ResnetBlockCondNorm2D : Module<Tensor, Tensor?, Tensor>
     private readonly bool down;
     private readonly float output_scale_factor;
     private readonly string time_embedding_norm;
+    private ScalarType defaultDtype;
 
     private readonly Module<Tensor, Tensor, Tensor> norm1;
     private readonly Module<Tensor, Tensor> conv1;
@@ -42,7 +43,8 @@ public class ResnetBlockCondNorm2D : Module<Tensor, Tensor?, Tensor>
         bool up = false,
         bool down = false,
         bool conv_shortcut_bias = true,
-        int? conv_2d_out_channels = null)
+        int? conv_2d_out_channels = null,
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(ResnetBlockCondNorm2D))
     {
         this.in_channels = in_channels;
@@ -61,21 +63,25 @@ public class ResnetBlockCondNorm2D : Module<Tensor, Tensor?, Tensor>
                 embedding_dim: temb_channels,
                 out_dim: this.in_channels,
                 num_groups: groups,
-                eps: eps);
+                eps: eps,
+                defaultDtype: dtype);
             this.norm2 = new AdaGroupNorm(
                 embedding_dim: temb_channels,
                 out_dim: this.out_channels,
                 num_groups: groups_out.Value,
-                eps: eps);
+                eps: eps,
+                defaultDtype: dtype);
         }
         else if (this.time_embedding_norm == "spatial")
         {
             this.norm1 = new SpatialNorm(
                 f_channels: this.in_channels,
-                zq_channels: temb_channels);
+                zq_channels: temb_channels,
+                dtype: dtype);
             this.norm2 = new SpatialNorm(
                 f_channels: this.out_channels,
-                zq_channels: temb_channels);
+                zq_channels: temb_channels,
+                dtype: dtype);
         }
         else
         {
@@ -87,7 +93,8 @@ public class ResnetBlockCondNorm2D : Module<Tensor, Tensor?, Tensor>
             outputChannel: this.in_channels,
             kernelSize: 3,
             stride: 1,
-            padding: 1);
+            padding: 1,
+            dtype: dtype);
 
         this.dropout = nn.Dropout(dropout);
         conv_2d_out_channels = conv_2d_out_channels ?? this.out_channels;
@@ -96,7 +103,8 @@ public class ResnetBlockCondNorm2D : Module<Tensor, Tensor?, Tensor>
             outputChannel: conv_2d_out_channels.Value,
             kernelSize: 3,
             stride: 1,
-            padding: 1);
+            padding: 1,
+            dtype: dtype);
         this.nonlinearity = Utils.GetActivation(non_linearity);
 
         this.upsample = null;
@@ -105,7 +113,8 @@ public class ResnetBlockCondNorm2D : Module<Tensor, Tensor?, Tensor>
         {
             this.upsample = new Upsample2D(
                 channels: this.in_channels,
-                use_conv: false);
+                use_conv: false,
+                dtype: dtype);
         }
         else if (this.down)
         {
@@ -113,7 +122,8 @@ public class ResnetBlockCondNorm2D : Module<Tensor, Tensor?, Tensor>
                 channels: this.in_channels,
                 use_conv: false,
                 padding: 1,
-                name: "op");
+                name: "op",
+                dtype: dtype);
         }
 
         this.use_conv_shortcut = use_in_shortcut ?? this.in_channels != conv_2d_out_channels;
@@ -126,7 +136,8 @@ public class ResnetBlockCondNorm2D : Module<Tensor, Tensor?, Tensor>
                 kernelSize: 1,
                 stride: 1,
                 padding: Padding.Valid,
-                bias: conv_shortcut_bias);
+                bias: conv_shortcut_bias,
+                dtype: dtype);
         }
     }
 

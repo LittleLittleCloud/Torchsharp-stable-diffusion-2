@@ -25,6 +25,8 @@ public class Encoder : Module<Tensor, Tensor>
     private readonly Module<Tensor, Tensor> conv_norm_out;
     private readonly Module<Tensor, Tensor> conv_act;
 
+    private readonly ScalarType dtype;
+
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Encoder"/> class.
@@ -45,7 +47,9 @@ public class Encoder : Module<Tensor, Tensor>
         int normNumGroups = 32,
         string activationFunction = "silu",
         bool doubleZ = true,
-        bool midBlockAddAttention = true)
+        bool midBlockAddAttention = true,
+        bool mid_block_from_deprecated_attn_block = true,
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(Encoder))
     {
 
@@ -56,8 +60,9 @@ public class Encoder : Module<Tensor, Tensor>
         _layersPerBlock = layersPerBlock;
         _normNumGroups = normNumGroups;
         _activationFunction = activationFunction;
+        this.dtype = dtype;
 
-        this.conv_in = torch.nn.Conv2d(this._inChannels, this._blockOutChannels[0], kernelSize: 3, stride: 1, padding: 1);
+        this.conv_in = torch.nn.Conv2d(this._inChannels, this._blockOutChannels[0], kernelSize: 3, stride: 1, padding: 1, dtype: this.dtype);
         this.down_blocks = new ModuleList<Module<Tensor, Tensor>>();
 
         // mid
@@ -69,7 +74,9 @@ public class Encoder : Module<Tensor, Tensor>
             resnet_time_scale_shift: "default",
             attention_head_dim: _blockOutChannels[^1],
             resnet_groups: normNumGroups,
-            add_attention: midBlockAddAttention);
+            add_attention: midBlockAddAttention,
+            from_deprecated_attn_block: mid_block_from_deprecated_attn_block,
+            dtype: this.dtype);
             
         var output_channel = _blockOutChannels[0];
         for (int i = 0; i < _blockOutChannels.Length; i++)
@@ -84,15 +91,16 @@ public class Encoder : Module<Tensor, Tensor>
                 num_layers: _layersPerBlock,
                 resnet_act_fun: _activationFunction,
                 resnet_groups: _normNumGroups,
-                downsample_padding: 0);
+                downsample_padding: 0,
+                dtype: this.dtype);
 
             this.down_blocks.Add(down_block);
         }
         // out
-        this.conv_norm_out = nn.GroupNorm(num_groups: normNumGroups, num_channels: _blockOutChannels[^1], eps: 1e-6f);
+        this.conv_norm_out = nn.GroupNorm(num_groups: normNumGroups, num_channels: _blockOutChannels[^1], eps: 1e-6f, dtype: this.dtype);
         this.conv_act = nn.SiLU();
         var conv_out_channels = doubleZ ? _outChannels * 2 : _outChannels;
-        this.conv_out = nn.Conv2d(_blockOutChannels[^1], conv_out_channels, kernelSize: 3, padding: Padding.Same);
+        this.conv_out = nn.Conv2d(_blockOutChannels[^1], conv_out_channels, kernelSize: 3, padding: Padding.Same, dtype: this.dtype);
 
     }
 
