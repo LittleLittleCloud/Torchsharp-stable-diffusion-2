@@ -13,6 +13,7 @@ public class StableDiffusionPipelineOutput
 }
 public class StableDiffusionPipeline
 {
+    private readonly ScalarType defaultDtype;
     private readonly int vae_scale_factor;
     private DeviceType device = DeviceType.CPU;
 
@@ -21,8 +22,10 @@ public class StableDiffusionPipeline
         CLIPTextModel text_encoder,
         BPETokenizer tokenizer,
         UNet2DConditionModel unet,
-        DDIMScheduler scheduler) // todo: safety checker, feature extractor and image encoder
+        DDIMScheduler scheduler,
+        ScalarType dtype = ScalarType.Float32) // todo: safety checker, feature extractor and image encoder
     {
+        this.defaultDtype = dtype;
         this.vae = vae;
         this.text_encoder = text_encoder;
         this.tokenizer = tokenizer;
@@ -143,6 +146,7 @@ public class StableDiffusionPipeline
             width!.Value,
             height!.Value,
             device,
+            dtype: this.defaultDtype,
             generator: generator,
             latents: latents);
         
@@ -289,7 +293,8 @@ public class StableDiffusionPipeline
         string textModelFolder = "text_encoder",
         string schedulerFolder = "scheduler",
         string unetFolder = "unet",
-        string tokenizerFolder = "tokenizer")
+        string tokenizerFolder = "tokenizer",
+        ScalarType torchDtype = ScalarType.Float32)
     {
         var unetModelPath = Path.Join(modelWeightFolder, unetFolder);
         var tokenzierModelPath = Path.Join(modelWeightFolder, tokenizerFolder);
@@ -297,9 +302,9 @@ public class StableDiffusionPipeline
         var schedulerModelPath = Path.Join(modelWeightFolder, schedulerFolder);
         var vaeModelPath = Path.Join(modelWeightFolder, vaeFolder);
         var tokenizer = BPETokenizer.FromPretrained(tokenzierModelPath);
-        var clipTextModel = CLIPTextModel.FromPretrained(textModelPath);
-        var unet = UNet2DConditionModel.FromPretrained(unetModelPath);
-        var vae = AutoencoderKL.FromPretrained(vaeModelPath);
+        var clipTextModel = CLIPTextModel.FromPretrained(textModelPath, torchDtype: torchDtype);
+        var unet = UNet2DConditionModel.FromPretrained(unetModelPath, torchDtype: torchDtype);
+        var vae = AutoencoderKL.FromPretrained(vaeModelPath, torchDtype: torchDtype);
         var scheduler = DDIMScheduler.FromPretrained(schedulerModelPath);
 
         var pipeline = new StableDiffusionPipeline(
@@ -307,7 +312,8 @@ public class StableDiffusionPipeline
             text_encoder: clipTextModel,
             unet: unet,
             tokenizer: tokenizer,
-            scheduler: scheduler);
+            scheduler: scheduler,
+            dtype: torchDtype);
 
         return pipeline;
     }

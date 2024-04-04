@@ -20,21 +20,22 @@ public class TimestepEmbedding : Module<Tensor, Tensor?, Tensor>
         int? out_dim = null,
         string? post_act_fn = null,
         int? cond_proj_dim = null,
-        bool sample_proj_bias = true)
+        bool sample_proj_bias = true,
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(TimestepEmbedding))
     {
-        this.linear_1 = Linear(in_channels, time_embed_dim, sample_proj_bias);
+        this.linear_1 = Linear(in_channels, time_embed_dim, sample_proj_bias, dtype: dtype);
 
         if (cond_proj_dim is int proj_dim)
         {
-            this.cond_proj = Linear(proj_dim, time_embed_dim, false);
+            this.cond_proj = Linear(proj_dim, time_embed_dim, false, dtype: dtype);
         }
 
         this.act = Utils.GetActivation(act_fn);
 
         var time_embed_dim_out = out_dim ?? time_embed_dim;
 
-        this.linear_2 = Linear(time_embed_dim, time_embed_dim_out, sample_proj_bias);
+        this.linear_2 = Linear(time_embed_dim, time_embed_dim_out, sample_proj_bias, dtype: dtype);
 
         if (post_act_fn is string post_act_fn_str)
         {

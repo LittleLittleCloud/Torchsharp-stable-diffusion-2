@@ -23,7 +23,7 @@ torch.set_default_dtype(dtype);
 var generator = torch.manual_seed(41);
 var input = "a photo of an astronaut riding a horse on mars";
 var modelFolder = "/home/xiaoyuz/stable-diffusion-2/";
-var pipeline = StableDiffusionPipeline.FromPretrained(modelFolder);
+var pipeline = StableDiffusionPipeline.FromPretrained(modelFolder, torchDtype: dtype);
 pipeline.To(device);
 
 var output = pipeline.Run(

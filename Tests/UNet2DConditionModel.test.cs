@@ -26,6 +26,17 @@ public class UNet2DConditionModelTest
     [Fact]
     [UseReporter(typeof(DiffReporter))]
     [UseApprovalSubdirectory("Approvals")]
+    public async Task Fp16ShapeTest()
+    {
+        var modelWeightFolder = "/home/xiaoyuz/stable-diffusion-2/unet";
+        var unet = UNet2DConditionModel.FromPretrained(modelWeightFolder, torchDtype: ScalarType.Float16);
+        var state_dict_str = unet.Peek();
+        Approvals.Verify(state_dict_str);
+    }
+
+    [Fact]
+    [UseReporter(typeof(DiffReporter))]
+    [UseApprovalSubdirectory("Approvals")]
     public async Task ForwardTest()
     {
         var dtype = ScalarType.Float32;

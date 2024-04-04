@@ -59,7 +59,8 @@ public class Transformer2DModel : Module<Tensor, Tensor?, Tensor?,Tensor?, Tenso
         double norm_eps = 1e-5,
         string attention_type = "default",
         int? caption_channels = null,
-        double? interpolation_scale = null)
+        double? interpolation_scale = null,
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(Transformer2DModel))
     {
         this.num_attention_heads = num_attention_heads;
@@ -108,15 +109,15 @@ public class Transformer2DModel : Module<Tensor, Tensor?, Tensor?,Tensor?, Tenso
 
         if (this.is_input_continuous)
         {
-            this.norm = GroupNorm(num_groups: norm_num_groups, num_channels: in_channels!.Value, eps: 1e-6, affine: true);
+            this.norm = GroupNorm(num_groups: norm_num_groups, num_channels: in_channels!.Value, eps: 1e-6, affine: true, dtype: dtype);
 
             if (this.use_linear_projection)
             {
-                this.proj_in = Linear(in_channels!.Value, inner_dim);
+                this.proj_in = Linear(in_channels!.Value, inner_dim, dtype: dtype);
             }
             else
             {
-                this.proj_in = Conv2d(in_channels!.Value, inner_dim, kernelSize: 1, stride: 1, padding: Padding.Valid);
+                this.proj_in = Conv2d(in_channels!.Value, inner_dim, kernelSize: 1, stride: 1, padding: Padding.Valid, dtype: dtype);
             }
         }
 
@@ -138,7 +139,8 @@ public class Transformer2DModel : Module<Tensor, Tensor?, Tensor?,Tensor?, Tenso
                 norm_type: norm_type,
                 norm_elementwise_affine: norm_elementwise_affine,
                 norm_eps: norm_eps,
-                attention_type: attention_type
+                attention_type: attention_type,
+                dtype: dtype
             ));
         }
 
@@ -147,11 +149,11 @@ public class Transformer2DModel : Module<Tensor, Tensor?, Tensor?,Tensor?, Tenso
         {
             if (this.use_linear_projection)
             {
-                this.proj_out = Linear(inner_dim, in_channels!.Value);
+                this.proj_out = Linear(inner_dim, in_channels!.Value, dtype: dtype);
             }
             else
             {
-                this.proj_out = Conv2d(inner_dim, in_channels!.Value, kernelSize: 1, stride: 1, padding: Padding.Valid);
+                this.proj_out = Conv2d(inner_dim, in_channels!.Value, kernelSize: 1, stride: 1, padding: Padding.Valid, dtype: dtype);
             }
         }
     }

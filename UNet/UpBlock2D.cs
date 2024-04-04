@@ -16,7 +16,8 @@ public class UpBlock2D : Module<UpBlock2DInput, Tensor>
         int? resnet_groups = 32,
         bool resnet_pre_norm = true,
         float output_scale_factor = 1.0f,
-        bool add_upsample = true
+        bool add_upsample = true,
+        ScalarType dtype = ScalarType.Float32
     ): base(nameof(UpBlock2D))
     {
         var resnets = new ModuleList<ResnetBlock2D>();
@@ -36,7 +37,8 @@ public class UpBlock2D : Module<UpBlock2DInput, Tensor>
                     time_embedding_norm: resnet_time_scale_shift,
                     non_linearity: resnet_act_fn,
                     output_scale_factor: output_scale_factor,
-                    pre_norm: resnet_pre_norm)
+                    pre_norm: resnet_pre_norm,
+                    dtype: dtype)
             );
         }
 
@@ -48,7 +50,8 @@ public class UpBlock2D : Module<UpBlock2DInput, Tensor>
             this.upsamplers.Add(new Upsample2D(
                 channels: out_channels,
                 use_conv: true,
-                out_channels: out_channels
+                out_channels: out_channels,
+                dtype: dtype
             ));
         }
 

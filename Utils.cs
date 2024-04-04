@@ -150,7 +150,8 @@ public static class Utils
         string? cross_attention_norm = null,
         int? attention_head_dim = null,
         string? downsample_type = null,
-        float dropout = 0.0f)
+        float dropout = 0.0f,
+        ScalarType dtype = ScalarType.Float32)
     {
         // If attn head dim is not defined, we default it to the number of heads
         attention_head_dim ??= num_attention_heads;
@@ -170,7 +171,8 @@ public static class Utils
                 resnet_act_fn: resnet_act_fn,
                 resnet_groups: resnet_groups,
                 downsample_padding: downsample_padding,
-                resnet_time_scale_shift: resnet_time_scale_shift);
+                resnet_time_scale_shift: resnet_time_scale_shift,
+                dtype: dtype);
         }
         else if (down_block_type == nameof(CrossAttnDownBlock2D))
         {
@@ -198,7 +200,8 @@ public static class Utils
                 only_cross_attention: only_cross_attention,
                 upcast_attention: upcast_attention,
                 resnet_time_scale_shift: resnet_time_scale_shift,
-                attention_type: attention_type);
+                attention_type: attention_type,
+                dtype: dtype);
         }
         else
         {
@@ -226,7 +229,8 @@ public static class Utils
         bool resnet_skip_time_act = false,
         string? cross_attention_norm = null,
         int? attention_head_dim = 1,
-        float dropout = 0.0f)
+        float dropout = 0.0f,
+        ScalarType dtype = ScalarType.Float32)
     {
         if (mid_block_type == nameof(UNetMidBlock2D))
         {
@@ -240,7 +244,8 @@ public static class Utils
                 output_scale_factor: output_scale_factor,
                 resnet_groups: resnet_groups,
                 resnet_time_scale_shift: resnet_time_scale_shift,
-                add_attention: false);
+                add_attention: false,
+                dtype: dtype);
         }
         else if (mid_block_type == nameof(UNetMidBlock2DCrossAttn))
         {
@@ -261,7 +266,8 @@ public static class Utils
                 dual_cross_attention: dual_cross_attention,
                 use_linear_projection: use_linear_projection,
                 upcast_attention: upcast_attention,
-                attention_type: attention_type);
+                attention_type: attention_type,
+                dtype: dtype);
         }
         else
         {
@@ -295,7 +301,8 @@ public static class Utils
         string? cross_attention_norm = null,
         int? attention_head_dim = null,
         string? upsample_type = null,
-        float dropout = 0.0f)
+        float dropout = 0.0f,
+        ScalarType dtype = ScalarType.Float32)
     {
         attention_head_dim = attention_head_dim ?? num_attention_heads;
         up_block_type = up_block_type.StartsWith("UNetRes") ? up_block_type.Substring(7) : up_block_type;
@@ -314,7 +321,8 @@ public static class Utils
                 resnet_eps: resnet_eps,
                 resnet_act_fn: resnet_act_fn,
                 resnet_groups: resnet_groups,
-                resnet_time_scale_shift: resnet_time_scale_shift);
+                resnet_time_scale_shift: resnet_time_scale_shift,
+                dtype: dtype);
         }
         else if (up_block_type == nameof(CrossAttnUpBlock2D))
         {
@@ -340,7 +348,8 @@ public static class Utils
                 only_cross_attention: only_cross_attention,
                 upcast_attention: upcast_attention,
                 resnet_time_scale_shift: resnet_time_scale_shift,
-                attention_type: attention_type);
+                attention_type: attention_type,
+                dtype: dtype);
                 
         }
         else

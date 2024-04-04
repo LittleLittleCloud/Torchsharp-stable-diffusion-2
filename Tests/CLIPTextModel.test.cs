@@ -26,6 +26,17 @@ public class CLIPTextModelTest
     [Fact]
     [UseReporter(typeof(DiffReporter))]
     [UseApprovalSubdirectory("Approvals")]
+    public async Task Fp16ShapeTest()
+    {
+        var modelWeightFolder = "/home/xiaoyuz/stable-diffusion-2/text_encoder";
+        var clipTextModel = CLIPTextModel.FromPretrained(modelWeightFolder, torchDtype: ScalarType.Float16);
+        var state_dict_str = clipTextModel.Peek();
+        Approvals.Verify(state_dict_str);
+    }
+
+    [Fact]
+    [UseReporter(typeof(DiffReporter))]
+    [UseApprovalSubdirectory("Approvals")]
     public async Task TextModelForwardTest()
     {
         var modelWeightFolder = "/home/xiaoyuz/stable-diffusion-2/text_encoder";

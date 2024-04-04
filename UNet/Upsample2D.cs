@@ -112,7 +112,7 @@ public class Upsample2D : Module<Tensor, int?, Tensor>
         }
 
         if (dtype == ScalarType.BFloat16 || dtype == ScalarType.Float16){
-            hidden_states = hidden_states.to_type(ScalarType.BFloat16);
+            hidden_states = hidden_states.to_type(dtype);
         }
 
         if (this.use_conv)

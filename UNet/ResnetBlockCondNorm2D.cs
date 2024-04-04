@@ -64,13 +64,13 @@ public class ResnetBlockCondNorm2D : Module<Tensor, Tensor?, Tensor>
                 out_dim: this.in_channels,
                 num_groups: groups,
                 eps: eps,
-                defaultDtype: dtype);
+                dtype: dtype);
             this.norm2 = new AdaGroupNorm(
                 embedding_dim: temb_channels,
                 out_dim: this.out_channels,
                 num_groups: groups_out.Value,
                 eps: eps,
-                defaultDtype: dtype);
+                dtype: dtype);
         }
         else if (this.time_embedding_norm == "spatial")
         {

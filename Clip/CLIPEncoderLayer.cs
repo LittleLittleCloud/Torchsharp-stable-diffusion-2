@@ -18,9 +18,9 @@ public class CLIPEncoderLayer : Module<Tensor, Tensor?, Tensor?, bool?, (Tensor,
     {
         this.embed_dim = config.HiddenSize;
         this.self_attn = new CLIPAttention(config);
-        this.layer_norm1 = LayerNorm(embed_dim, eps: config.LayerNormEps);
+        this.layer_norm1 = LayerNorm(embed_dim, eps: config.LayerNormEps, dtype: config.DType);
         this.mlp = new CLIPMLP(config);
-        this.layer_norm2 = LayerNorm(embed_dim, eps: config.LayerNormEps);
+        this.layer_norm2 = LayerNorm(embed_dim, eps: config.LayerNormEps, dtype: config.DType);
 
         RegisterComponents();
     }

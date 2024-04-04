@@ -69,7 +69,8 @@ public class CrossAttnUpBlock2D : Module<UpBlock2DInput, Tensor>
         bool use_linear_projection = false,
         bool only_cross_attention = false,
         bool upcast_attention = false,
-        string attention_type = "default")
+        string attention_type = "default",
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(CrossAttnUpBlock2D))
     {
         ModuleList<ResnetBlock2D> resnets = new ModuleList<ResnetBlock2D>();
@@ -95,7 +96,8 @@ public class CrossAttnUpBlock2D : Module<UpBlock2DInput, Tensor>
                     time_embedding_norm: resnet_time_scale_shift,
                     non_linearity: resnet_act_fn,
                     output_scale_factor: output_scale_factor,
-                    pre_norm: resnet_pre_norm));
+                    pre_norm: resnet_pre_norm,
+                    dtype: dtype));
             
             if (!dual_cross_attention)
             {
@@ -110,7 +112,8 @@ public class CrossAttnUpBlock2D : Module<UpBlock2DInput, Tensor>
                         use_linear_projection: use_linear_projection,
                         only_cross_attention: only_cross_attention,
                         upcast_attention: upcast_attention,
-                        attention_type: attention_type));
+                        attention_type: attention_type,
+                        dtype: dtype));
             }
             else
             {
@@ -121,7 +124,8 @@ public class CrossAttnUpBlock2D : Module<UpBlock2DInput, Tensor>
                         in_channels: out_channels,
                         num_layers: 1,
                         cross_attention_dim: cross_attention_dim,
-                        norm_num_groups: resnet_groups));
+                        norm_num_groups: resnet_groups,
+                        dtype: dtype));
             
             }
         }
@@ -136,7 +140,8 @@ public class CrossAttnUpBlock2D : Module<UpBlock2DInput, Tensor>
                 new Upsample2D(
                     channels: out_channels,
                     use_conv: true,
-                    out_channels: out_channels));
+                    out_channels: out_channels,
+                    dtype: dtype));
         }
         this.resolution_idx = resolution_idx;
     }

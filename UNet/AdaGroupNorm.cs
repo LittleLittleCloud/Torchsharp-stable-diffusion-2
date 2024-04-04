@@ -20,7 +20,7 @@ public class AdaGroupNorm : Module<Tensor, Tensor, Tensor>
         int num_groups,
         string? act_fn = null,
         float eps = 1e-5f,
-        ScalarType defaultDtype = ScalarType.Float32)
+        ScalarType dtype = ScalarType.Float32)
         : base(nameof(AdaGroupNorm))
     {
         this.embedding_dim = embedding_dim;
@@ -28,10 +28,10 @@ public class AdaGroupNorm : Module<Tensor, Tensor, Tensor>
         this.num_groups = num_groups;
         this.act_fn = act_fn;
         this.eps = eps;
-        this.defaultDtype = defaultDtype;
+        this.defaultDtype = dtype;
 
         this.act = act_fn != null ? Utils.GetActivation(act_fn) : null;
-        this.linear = Linear(embedding_dim, out_dim * 2, dtype: defaultDtype);
+        this.linear = Linear(embedding_dim, out_dim * 2, dtype: dtype);
     }
 
     public override Tensor forward(Tensor x, Tensor emb)

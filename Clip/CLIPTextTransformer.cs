@@ -52,7 +52,7 @@ public class CLIPTextTransformer : Module<Tensor, Tensor?, Tensor?, bool?, bool?
         this.config = config;
         this.embeddings = new CLIPTextEmbeddings(config);
         this.encoder = new CLIPEncoder(config);
-        this.final_layer_norm = LayerNorm(config.HiddenSize, eps: config.LayerNormEps);
+        this.final_layer_norm = LayerNorm(config.HiddenSize, eps: config.LayerNormEps, dtype: config.DType);
         this.eos_token_id = config.EosTokenId;
 
         RegisterComponents();

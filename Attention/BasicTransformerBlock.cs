@@ -67,7 +67,8 @@ public class BasicTransformerBlock : Module<Tensor, Tensor?, Tensor?, Tensor?, T
         int? ada_norm_bias = null,
         int? ff_inner_dim = null,
         bool ff_bias = true,
-        bool attention_out_bias = true
+        bool attention_out_bias = true,
+        ScalarType dtype = ScalarType.Float32
     ) : base(nameof(BasicTransformerBlock))
     {
         this.dim = dim;
@@ -110,7 +111,7 @@ public class BasicTransformerBlock : Module<Tensor, Tensor?, Tensor?, Tensor?, T
             throw new NotImplementedException("Positional embeddings are not supported for now");
         }
 
-        this.norm1 = LayerNorm(dim, elementwise_affine: norm_elementwise_affine, eps: norm_eps);
+        this.norm1 = LayerNorm(dim, elementwise_affine: norm_elementwise_affine, eps: norm_eps, dtype: dtype);
         this.attn1 = new Attention(
             query_dim: dim,
             heads: num_attention_heads,
@@ -119,11 +120,12 @@ public class BasicTransformerBlock : Module<Tensor, Tensor?, Tensor?, Tensor?, T
             bias: attention_bias,
             cross_attention_dim: only_cross_attention ? cross_attention_dim : null,
             upcast_attention: upcast_attention,
-            out_bias: attention_out_bias);
+            out_bias: attention_out_bias,
+            dtype: dtype);
 
         if (cross_attention_dim is not null || double_self_attention)
         {
-            this.norm2 = LayerNorm(dim, elementwise_affine: norm_elementwise_affine, eps: norm_eps);
+            this.norm2 = LayerNorm(dim, elementwise_affine: norm_elementwise_affine, eps: norm_eps, dtype: dtype);
             this.attn2 = new Attention(
                 query_dim: dim,
                 cross_attention_dim: double_self_attention ? null : cross_attention_dim,
@@ -132,12 +134,13 @@ public class BasicTransformerBlock : Module<Tensor, Tensor?, Tensor?, Tensor?, T
                 dropout: (float)dropout,
                 bias: attention_bias,
                 upcast_attention: upcast_attention,
-                out_bias: attention_out_bias);
+                out_bias: attention_out_bias,
+                dtype: dtype);
         }
 
         if (norm_type == "layer_norm")
         {
-            this.norm3 = LayerNorm(dim, elementwise_affine: norm_elementwise_affine, eps: norm_eps);
+            this.norm3 = LayerNorm(dim, elementwise_affine: norm_elementwise_affine, eps: norm_eps, dtype: dtype);
         }
 
         if (attention_type != "default")
@@ -151,7 +154,8 @@ public class BasicTransformerBlock : Module<Tensor, Tensor?, Tensor?, Tensor?, T
             activation_fn: activation_fn,
             final_dropout: final_dropout,
             inner_dim: ff_inner_dim,
-            bias: ff_bias);
+            bias: ff_bias,
+            dtype: dtype);
 
         this._chunk_size = null;
         this._chunk_dim = 0;

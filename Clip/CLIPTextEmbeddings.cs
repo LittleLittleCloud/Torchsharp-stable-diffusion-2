@@ -15,8 +15,8 @@ public class CLIPTextEmbeddings : Module<Tensor?, Tensor?, Tensor?, Tensor>
     {
         this.config = config;
         var embed_dim = config.HiddenSize;
-        token_embedding = Embedding(config.VocabSize, embed_dim);
-        position_embedding = Embedding(config.MaxPositionEmbeddings, embed_dim);
+        token_embedding = Embedding(config.VocabSize, embed_dim, dtype: config.DType);
+        position_embedding = Embedding(config.MaxPositionEmbeddings, embed_dim, dtype: config.DType);
 
         this.register_buffer("position_ids", arange(config.MaxPositionEmbeddings).expand(1, -1), persistent: false);
 

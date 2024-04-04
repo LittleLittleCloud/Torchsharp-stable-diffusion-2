@@ -17,14 +17,17 @@ public class CLIPAttention : Module<Tensor, Tensor?, Tensor?, bool?, (Tensor, Te
     private readonly Linear v_proj;
     private readonly Linear q_proj;
     private readonly Linear out_proj;
+    private readonly ScalarType dtype;
 
-    public CLIPAttention(CLIPTextConfig config)
+    public CLIPAttention(
+        CLIPTextConfig config)
         : base(nameof(CLIPAttention))
     {
         this.config = config;
         this.embed_dim = config.HiddenSize;
         this.num_heads = config.NumAttentionHeads;
         this.head_dim = this.embed_dim / this.num_heads;
+        this.dtype = config.DType;
         if (this.head_dim * this.num_heads != this.embed_dim)
         {
             throw new ArgumentException("embed_dim must be divisible by num_heads");
@@ -33,10 +36,10 @@ public class CLIPAttention : Module<Tensor, Tensor?, Tensor?, bool?, (Tensor, Te
         this.scale = 1.0f / MathF.Sqrt(this.head_dim);
         this.dropout = config.AttentionDropout;
 
-        this.k_proj = Linear(this.embed_dim, this.embed_dim);
-        this.v_proj = Linear(this.embed_dim, this.embed_dim);
-        this.q_proj = Linear(this.embed_dim, this.embed_dim);
-        this.out_proj = Linear(this.embed_dim, this.embed_dim);
+        this.k_proj = Linear(this.embed_dim, this.embed_dim, dtype: dtype);
+        this.v_proj = Linear(this.embed_dim, this.embed_dim, dtype: dtype);
+        this.q_proj = Linear(this.embed_dim, this.embed_dim, dtype: dtype);
+        this.out_proj = Linear(this.embed_dim, this.embed_dim, dtype: dtype);
         
         RegisterComponents();
     }
