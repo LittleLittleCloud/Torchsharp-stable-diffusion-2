@@ -158,7 +158,6 @@ public class StableDiffusionPipeline
             // expand the latents if we are doing classifier free guidance
             var latent_model_input = !do_classifier_free_guidance ? latents : torch.cat([latents, latents], 0);
             latent_model_input = this.scheduler.ScaleModelInput(latent_model_input, step);
-
             // predict noise residual
             Tensor noise_pred;
             using (var __ = NewDisposeScope())
@@ -169,6 +168,9 @@ public class StableDiffusionPipeline
                     encoderHiddenStates: prompt_embeds);
                 noise_pred = this.unet.forward(unetInput).MoveToOuterDisposeScope();
             }
+            latent_model_input.Peek("latent_model_input");
+            prompt_embeds.Peek("prompt_embeds");
+            noise_pred.Peek("noise_pred");
 
             if (do_classifier_free_guidance)
             {

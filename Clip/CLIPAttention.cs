@@ -67,7 +67,6 @@ public class CLIPAttention : Module<Tensor, Tensor?, Tensor?, bool?, (Tensor, Te
 
         var src_len = key_states.shape[1];
         var attn_weights = torch.bmm(query_states, key_states.transpose(1, 2));
-
         // attn_weights's shape: (bsz * num_heads, tgt_len, src_len)
 
         if (causal_attention_mask is not null)
@@ -84,7 +83,7 @@ public class CLIPAttention : Module<Tensor, Tensor?, Tensor?, bool?, (Tensor, Te
             attn_weights = attn_weights.view(bsz * this.num_heads, tgt_len, src_len);
         }
 
-        attn_weights = attn_weights.softmax(-1);
+        attn_weights = attn_weights.softmax(-1, dtype: this.config.DType);
         Tensor? attn_weights_reshaped = null;
 
         if (output_attentions == true)
@@ -101,11 +100,10 @@ public class CLIPAttention : Module<Tensor, Tensor?, Tensor?, bool?, (Tensor, Te
         var attn_output = torch.bmm(attn_probs, value_states);
 
         // attn_output's shape: (bsz * num_heads, tgt_len, head_dim)
-
         attn_output = attn_output.view(bsz, this.num_heads, tgt_len, this.head_dim);
         attn_output = attn_output.transpose(1, 2);
-        attn_output = attn_output.contiguous().view(bsz, tgt_len, embed_dim);
-
+        attn_output.Peek("attn_output");
+        attn_output = attn_output.reshape(bsz, tgt_len, embed_dim);
         attn_output = this.out_proj.forward(attn_output);
 
         return (attn_output, attn_weights_reshaped);

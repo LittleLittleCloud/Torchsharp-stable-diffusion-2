@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using TorchSharp;
 using SD;
-var dtype = ScalarType.Float32;
+var dtype = ScalarType.Float16;
 var device = DeviceType.CUDA;
 var outputFolder = "img";
 torchvision.io.DefaultImager = new torchvision.io.SkiaImager();
@@ -19,8 +19,7 @@ if (!torch.cuda.is_available())
 {
     device = DeviceType.CPU;
 }
-torch.set_default_dtype(dtype);
-var generator = torch.manual_seed(41);
+
 var input = "a photo of an astronaut riding a horse on mars";
 var modelFolder = "/home/xiaoyuz/stable-diffusion-2/";
 var pipeline = StableDiffusionPipeline.FromPretrained(modelFolder, torchDtype: dtype);
@@ -28,8 +27,8 @@ pipeline.To(device);
 
 var output = pipeline.Run(
     prompt: input,
-    num_inference_steps: 50,
-    generator: generator);
+    num_inference_steps: 50
+    );
 
 var decoded_images = torch.clamp((output.Images + 1.0) / 2.0, 0.0, 1.0);
 

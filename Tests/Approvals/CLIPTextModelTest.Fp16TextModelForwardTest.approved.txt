@@ -1,0 +1,2 @@
+﻿clip_text_model_forward: sum: 79.3837  dtype: Float16 shape: [2,7,1024]
+clip_text_model_forward: sum: 29.3969  dtype: Float16 shape: [2,1024]

@@ -308,7 +308,6 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
 
         timestep = timestep.expand(sample.shape[0]);
         var time_embed = this.time_proj.forward(timestep);
-        sample.Peek("sample");
         time_embed = time_embed.to(sample.dtype);
 
         return time_embed;
