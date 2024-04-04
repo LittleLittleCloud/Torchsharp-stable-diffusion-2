@@ -20,7 +20,7 @@ if (!torch.cuda.is_available())
     device = DeviceType.CPU;
 }
 
-var input = "a photo of an astronaut riding a horse on mars";
+var input = "a photo of nuclear cat";
 var modelFolder = "/home/xiaoyuz/stable-diffusion-2/";
 var pipeline = StableDiffusionPipeline.FromPretrained(modelFolder, torchDtype: dtype);
 pipeline.To(device);
