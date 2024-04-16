@@ -8,8 +8,7 @@ public class UpBlock2DInput
         Tensor? temb = null,
         Tensor? encoderHiddenStates = null,
         Dictionary<string, object>? crossAttentionKwargs = null,
-        int? upsampleSize = null,
-        int[]? upsampleSizeList = null,
+        long[]? upsampleSize = null,
         Tensor? attentionMask = null,
         Tensor? encoderAttentionMask = null)
     {
@@ -20,7 +19,6 @@ public class UpBlock2DInput
         CrossAttentionKwargs = crossAttentionKwargs;
         UpsampleSize = upsampleSize;
         AttentionMask = attentionMask;
-        UpsampleSizeList = upsampleSizeList;
         EncoderAttentionMask = encoderAttentionMask;
     }
     public Tensor HiddenStates { get; }
@@ -29,9 +27,7 @@ public class UpBlock2DInput
     public Tensor? EncoderHiddenStates { get; }
     public Dictionary<string, object>? CrossAttentionKwargs { get; }
 
-    public int? UpsampleSize { get; }
-
-    public int[]? UpsampleSizeList { get; }
+    public long[]? UpsampleSize { get; }
 
     public Tensor? AttentionMask { get; }
 

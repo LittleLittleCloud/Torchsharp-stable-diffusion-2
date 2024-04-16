@@ -331,7 +331,7 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
         var default_overall_up_factor = Math.Pow(2, this.num_upsamplers);
 
         var forward_upsample_size = false;
-        int? upsample_size = null;
+        long[]? upsample_size = null;
         var sample = input.Sample;
         foreach(var dim in input.Sample.shape[2..])
         {
@@ -453,7 +453,7 @@ public class UNet2DConditionModel: Module<UNet2DConditionModelInput, Tensor>
             // upsample size, we do it here
             if (!is_final_block && forward_upsample_size)
             {
-                upsample_size = down_block_res_samples[-1].IntShape()[2];
+                upsample_size = down_block_res_samples.Last().shape[2..];
             }
 
             var upBlockInput = new UpBlock2DInput(

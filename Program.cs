@@ -12,21 +12,23 @@ if (!Directory.Exists(outputFolder))
 }
 
 // Comment out the following two line and install torchsharp-cuda package if your machine support Cuda 12
-var libTorch = "/home/xiaoyuz/diffusers/venv/lib/python3.8/site-packages/torch/lib/libtorch.so";
-NativeLibrary.Load(libTorch);
+// var libTorch = "/home/xiaoyuz/diffusers/venv/lib/python3.8/site-packages/torch/lib/libtorch.so";
+// NativeLibrary.Load(libTorch);
 torch.InitializeDeviceType(device);
 if (!torch.cuda.is_available())
 {
     device = DeviceType.CPU;
 }
 
-var input = "a photo of nuclear cat";
-var modelFolder = "/home/xiaoyuz/stable-diffusion-2/";
+var input = "a photo of cat chasing after dog";
+var modelFolder = @"C:\Users\xiaoyuz\source\repos\stable-diffusion-2\";
 var pipeline = StableDiffusionPipeline.FromPretrained(modelFolder, torchDtype: dtype);
 pipeline.To(device);
 
 var output = pipeline.Run(
     prompt: input,
+    width: 1020,
+    height: 768,
     num_inference_steps: 50
     );
 

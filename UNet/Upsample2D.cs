@@ -4,7 +4,7 @@ using TorchSharp.Modules;
 
 namespace SD;
 
-public class Upsample2D : Module<Tensor, int?, Tensor>
+public class Upsample2D : Module<Tensor, long[]?, Tensor>
 {
     private readonly int channels;
     private readonly bool use_conv;
@@ -81,7 +81,7 @@ public class Upsample2D : Module<Tensor, int?, Tensor>
 
         }
 
-    public override Tensor forward(Tensor hidden_states, int? output_size)
+    public override Tensor forward(Tensor hidden_states, long[]? output_size)
     {
         if (this.norm != null)
         {
@@ -107,7 +107,7 @@ public class Upsample2D : Module<Tensor, int?, Tensor>
                 hidden_states = nn.functional.interpolate(hidden_states, scale_factor: [2, 2], mode: InterpolationMode.Nearest);
             }
             else{
-                hidden_states = nn.functional.interpolate(hidden_states, size: [output_size.Value], mode: InterpolationMode.Nearest);
+                hidden_states = nn.functional.interpolate(hidden_states, size: output_size, mode: InterpolationMode.Nearest);
             }
         }
 

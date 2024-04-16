@@ -22,7 +22,7 @@ public class UpDecoderBlock2D : Module<Tensor, Tensor?, Tensor>
     private readonly ScalarType dtype;
 
     private readonly ModuleList<Module<Tensor, Tensor?, Tensor>> resnets;
-    private readonly ModuleList<Module<Tensor, int?, Tensor>>? upsamplers = null;
+    private readonly ModuleList<Module<Tensor, long[]?, Tensor>>? upsamplers = null;
     public UpDecoderBlock2D(
         int in_channels,
         int out_channels,
@@ -94,7 +94,7 @@ public class UpDecoderBlock2D : Module<Tensor, Tensor?, Tensor>
 
         if (add_upsample)
         {
-            this.upsamplers = new ModuleList<Module<Tensor, int?, Tensor>>();
+            this.upsamplers = new ModuleList<Module<Tensor, long[]?, Tensor>>();
             this.upsamplers.Add(new Upsample2D(
                 channels: out_channels,
                 use_conv: true,

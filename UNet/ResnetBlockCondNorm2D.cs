@@ -23,7 +23,7 @@ public class ResnetBlockCondNorm2D : Module<Tensor, Tensor?, Tensor>
     private readonly Module<Tensor, Tensor> dropout;
     private readonly Module<Tensor, Tensor> conv2;
     private readonly Module<Tensor, Tensor> nonlinearity;
-    private readonly Module<Tensor, int?, Tensor>? upsample;
+    private readonly Module<Tensor, long[]?, Tensor>? upsample;
     private readonly Module<Tensor, Tensor>? downsample;
     private readonly Module<Tensor, Tensor>? conv_shortcut;
 

@@ -26,7 +26,7 @@ public class ResnetBlock2D : Module<Tensor, Tensor?, Tensor>
     private Module<Tensor, Tensor> dropout;
     private Linear? time_emb_proj;
     private Module<Tensor, Tensor> nonlinearity;
-    private Module<Tensor, int?, Tensor>? upsample = null;
+    private Module<Tensor, long[]?, Tensor>? upsample = null;
     private Module<Tensor, Tensor>? downsample = null;
     private Module<Tensor, Tensor>? conv_shortcut = null;
     public ResnetBlock2D(
